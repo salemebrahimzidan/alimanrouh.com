@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Info, Mail, type LucideIcon } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -56,16 +56,20 @@ function computeMenuPosition(button: HTMLElement, menuWidth: number): MenuPositi
 export function MainNavMoreDropdown({ compactLabels }: Props) {
   const { t } = useTranslation('shared')
   const { pathname } = useLocation()
-  const [open, setOpen] = useState(false)
+  const [openPath, setOpenPath] = useState<string | null>(null)
+  const open = openPath === pathname
+  const setOpen = useCallback((next: boolean | ((value: boolean) => boolean)) => {
+    setOpenPath((current) => {
+      const isOpen = current === pathname
+      const value = typeof next === 'function' ? next(isOpen) : next
+      return value ? pathname : null
+    })
+  }, [pathname])
   const [menuPos, setMenuPos] = useState<MenuPosition | null>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLUListElement>(null)
   const menuId = useId()
   const groupActive = isMainNavMoreActive(pathname)
-
-  useEffect(() => {
-    setOpen(false)
-  }, [pathname])
 
   const updateMenuPosition = () => {
     const button = buttonRef.current
@@ -75,10 +79,7 @@ export function MainNavMoreDropdown({ compactLabels }: Props) {
   }
 
   useLayoutEffect(() => {
-    if (!open) {
-      setMenuPos(null)
-      return
-    }
+    if (!open) return
 
     updateMenuPosition()
     const raf = requestAnimationFrame(updateMenuPosition)
@@ -119,7 +120,7 @@ export function MainNavMoreDropdown({ compactLabels }: Props) {
       window.clearTimeout(timer)
       removeListeners?.()
     }
-  }, [open])
+  }, [open, setOpen])
 
   const menu =
     open && menuPos

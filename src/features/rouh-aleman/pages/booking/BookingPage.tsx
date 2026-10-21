@@ -4,23 +4,22 @@ import {
   CheckCircle2,
   ChevronDown,
   Loader2,
-  Mail,
   MessageSquareText,
   Minus,
   Package,
   Plus,
   Send,
   Sparkles,
-  User,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { Country } from 'react-phone-number-input';
+import { Link, useSearchParams } from 'react-router-dom';
 
-import { createBooking } from '../../../../services/bookings';
-import { getPackages, type PackageItem } from '../../../../services/packages';
+import { listPublishedUmrahPackages, type PublicPackage } from '../../../../lib/catalog';
+import { errorText, formatMoney, type AppLanguage } from '../../../../lib/customer-contract';
+import { createUmrahBooking, getOwnProfile, type OwnProfile } from '../../../../lib/customer-data';
+import { useAuth } from '../../auth/auth-context';
 import { useLanguage } from '../../shared/hooks/useLanguage';
-import { InternationalPhoneInput } from '../../shared/ui/InternationalPhoneInput';
-import { isValidInternationalPhone } from '../../shared/utils/phone';
+import { LtrText } from '../../shared/ui/LtrText';
 
 const inputClass =
   'w-full rounded-xl border border-(--ra-border) bg-white py-3 text-sm font-medium text-(--ra-black) shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] outline-none transition duration-200 focus:border-(--ra-green)/35 focus:ring-2 focus:ring-(--ra-ring) disabled:cursor-not-allowed disabled:bg-(--ra-bg) disabled:opacity-70';
@@ -118,55 +117,74 @@ function TravelerCounter({
   );
 }
 
-function formatPrice(price: number, locale: string) {
-  return new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en-SA').format(price);
+function appLanguage(language: string): AppLanguage {
+  return language === 'ar' ? 'ar' : 'en';
 }
 
 export function BookingPage() {
   const { t } = useTranslation('booking');
   const { t: ts } = useTranslation('shared');
   const { language } = useLanguage();
+  const lang = appLanguage(language);
+  const { session } = useAuth();
+  const [params] = useSearchParams();
+  const requestedPackage = params.get('package') ?? '';
   const formId = useId();
   const [loading, setLoading] = useState(false);
   const [loadingPackages, setLoadingPackages] = useState(true);
-  const [packages, setPackages] = useState<PackageItem[]>([]);
-  const [success, setSuccess] = useState(false);
+  const [packages, setPackages] = useState<PublicPackage[]>([]);
+  const [profile, setProfile] = useState<OwnProfile | null>(null);
+  const [success, setSuccess] = useState<{ reference: string } | null>(null);
   const [error, setError] = useState('');
-  const [phoneCountry, setPhoneCountry] = useState<Country>('SA');
 
   const [form, setForm] = useState({
-    fullName: '',
-    phone: '',
-    email: '',
     adults: 1,
     children: 0,
     travelDate: '',
-    packageId: '',
+    packageId: requestedPackage,
     notes: '',
   });
 
   useEffect(() => {
-    getPackages()
+    let active = true;
+    listPublishedUmrahPackages()
       .then((data) => {
-        const activePackages = data.filter((item) => item.isActive);
-        setPackages(activePackages);
-
-        if (activePackages.length > 0) {
-          setForm((current) => ({
-            ...current,
-            packageId: current.packageId || activePackages[0].id,
-          }));
-        }
+        if (!active) return;
+        setPackages(data);
+        setForm((current) => ({
+          ...current,
+          packageId:
+            data.some((item) => item.id === current.packageId)
+              ? current.packageId
+              : (data[0]?.id ?? ''),
+        }));
       })
       .catch(() => {
-        setError(t('form.errors.loadPackages'));
+        if (active) setError(t('form.errors.loadPackages'));
       })
       .finally(() => {
-        setLoadingPackages(false);
+        if (active) setLoadingPackages(false);
       });
-    // Load packages once on mount; error copy uses language at fetch time.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [t]);
+
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId) return;
+    let active = true;
+    getOwnProfile(userId)
+      .then((row) => {
+        if (active) setProfile(row);
+      })
+      .catch((err) => {
+        if (active) setError(errorText(err, lang));
+      });
+    return () => {
+      active = false;
+    };
+  }, [session?.user.id, lang]);
 
   const selectedPackage = useMemo(
     () => packages.find((item) => item.id === form.packageId),
@@ -174,12 +192,12 @@ export function BookingPage() {
   );
 
   function validate() {
-    if (form.fullName.trim().length < 2) return t('form.errors.fullName');
-    if (!isValidInternationalPhone(form.phone, phoneCountry)) {
-      return t('form.errors.phone');
-    }
+    if (!session) return t('auth.required');
+    if (!profile || profile.id !== session.user.id) return t('auth.loadingProfile');
+    if (profile.account_status !== 'active') return t('auth.inactive');
     if (!form.travelDate) return t('form.errors.travelDate');
     if (!form.packageId) return t('form.errors.package');
+    if (form.adults + form.children < 1 || form.adults + form.children > 100) return t('form.errors.travelers');
     return '';
   }
 
@@ -197,35 +215,32 @@ export function BookingPage() {
       setLoading(true);
       setError('');
 
-      await createBooking({
-        fullName: form.fullName.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim() || undefined,
+      const created = await createUmrahBooking({
+        userId: session!.user.id,
+        packageId: form.packageId,
+        travelDate: form.travelDate,
         adults: form.adults,
         children: form.children,
-        travelDate: form.travelDate,
-        packageId: form.packageId,
-        notes: form.notes.trim() || undefined,
+        note: form.notes,
       });
 
-      setSuccess(true);
+      setSuccess({ reference: created.reference });
 
       setForm({
-        fullName: '',
-        phone: '',
-        email: '',
         adults: 1,
         children: 0,
         travelDate: '',
         packageId: packages[0]?.id ?? '',
         notes: '',
       });
-    } catch {
-      setError(t('form.errors.submitFailed'));
+    } catch (err) {
+      setError(errorText(err, lang));
     } finally {
       setLoading(false);
     }
   }
+
+  const returnTo = `/booking?package=${encodeURIComponent(form.packageId)}`;
 
   if (success) {
     return (
@@ -251,14 +266,27 @@ export function BookingPage() {
           <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-(--ra-muted) sm:text-base">
             {t('success.message')}
           </p>
+          {success.reference ? (
+            <p className="mt-3 text-sm font-bold text-(--ra-green)">
+              {t('success.reference')} <LtrText>{success.reference}</LtrText>
+            </p>
+          ) : null}
 
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/account/bookings"
+            className="inline-flex items-center gap-2 rounded-2xl border border-(--ra-border) px-7 py-3.5 text-sm font-semibold text-(--ra-green)"
+          >
+            {t('success.view')}
+          </Link>
           <button
             type="button"
-            onClick={() => setSuccess(false)}
-            className="mt-8 inline-flex items-center gap-2 rounded-2xl bg-(--ra-green) px-7 py-3.5 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(6,51,39,0.28)] transition motion-safe:hover:-translate-y-0.5 hover:bg-(--ra-green-2)"
+            onClick={() => setSuccess(null)}
+            className="inline-flex items-center gap-2 rounded-2xl bg-(--ra-green) px-7 py-3.5 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(6,51,39,0.28)] transition motion-safe:hover:-translate-y-0.5 hover:bg-(--ra-green-2)"
           >
             {t('success.action')}
           </button>
+          </div>
         </div>
       </div>
     );
@@ -313,68 +341,30 @@ export function BookingPage() {
                   description={t('form.sections.details.description')}
                 />
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField
-                    id={`${formId}-fullName`}
-                    label={t('form.fields.fullName')}
-                    required
-                  >
-                    <span className="relative block">
-                      <User
-                        className="pointer-events-none absolute inset-s-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-(--ra-green)"
-                        aria-hidden="true"
-                      />
-                      <input
-                        id={`${formId}-fullName`}
-                        placeholder={t('form.placeholders.fullName')}
-                        autoComplete="name"
-                        className={`${inputClass} ps-10 pe-4`}
-                        value={form.fullName}
-                        onChange={(e) =>
-                          setForm({ ...form, fullName: e.target.value })
-                        }
-                      />
-                    </span>
-                  </FormField>
-
-                  <FormField
-                    id={`${formId}-phone`}
-                    label={t('form.fields.phone')}
-                    required
-                  >
-                    <InternationalPhoneInput
-                      id={`${formId}-phone`}
-                      value={form.phone}
-                      onChange={(phone) => setForm({ ...form, phone })}
-                      onCountryChange={setPhoneCountry}
-                      country={phoneCountry}
-                      defaultCountry="SA"
-                      labelsLocale={language}
-                      placeholder={t('form.placeholders.phone')}
-                      disabled={loading}
-                    />
-                  </FormField>
-
-                  <FormField id={`${formId}-email`} label={t('form.fields.email')}>
-                    <span className="relative block">
-                      <Mail
-                        className="pointer-events-none absolute inset-s-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-(--ra-green)"
-                        aria-hidden="true"
-                      />
-                      <input
-                        id={`${formId}-email`}
-                        placeholder={t('form.placeholders.email')}
-                        type="email"
-                        autoComplete="email"
-                        className={`${inputClass} ps-10 pe-4`}
-                        value={form.email}
-                        onChange={(e) =>
-                          setForm({ ...form, email: e.target.value })
-                        }
-                      />
-                    </span>
-                  </FormField>
-                </div>
+                {!session ? (
+                  <div className="rounded-xl border border-(--ra-gold)/40 bg-(--ra-gold-soft) px-4 py-4 text-sm text-(--ra-green)">
+                    <p>{t('auth.required')}</p>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <Link to={`/login?next=${encodeURIComponent(returnTo)}`} className="font-bold underline">
+                        {t('auth.login')}
+                      </Link>
+                      <Link to={`/register?next=${encodeURIComponent(returnTo)}`} className="font-bold underline">
+                        {t('auth.register')}
+                      </Link>
+                    </div>
+                  </div>
+                ) : profile && profile.id === session.user.id ? (
+                  <div className="rounded-xl border border-(--ra-border) bg-(--ra-bg)/60 px-4 py-4 text-sm">
+                    <p className="font-bold text-(--ra-green)">{profile.full_name}</p>
+                    <p className="mt-1 text-(--ra-muted)"><LtrText>{profile.mobile}</LtrText></p>
+                    <p className="text-(--ra-muted)"><LtrText>{profile.email ?? ''}</LtrText></p>
+                    {profile.account_status !== 'active' ? (
+                      <p className="mt-3 font-medium text-red-700">{t('auth.inactive')}</p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-sm text-(--ra-muted)">{t('auth.loadingProfile')}</p>
+                )}
               </section>
 
               <div className="h-px bg-(--ra-border)" aria-hidden="true" />
@@ -438,8 +428,7 @@ export function BookingPage() {
                         {!loadingPackages &&
                           packages.map((item) => (
                             <option key={item.id} value={item.id}>
-                              {item.title} — {formatPrice(item.price, language)}{' '}
-                              {t('currency.sar')}
+                              {item.title} — {formatMoney(item.price ?? 0, lang)}
                             </option>
                           ))}
                       </select>
@@ -552,8 +541,9 @@ export function BookingPage() {
                     </p>
 
                     <p className="mt-1 text-2xl font-bold tabular-nums">
-                      {formatPrice(selectedPackage.price, language)} {t('currency.sar')}
+                      {formatMoney((selectedPackage.price ?? 0) * (form.adults + form.children), lang)}
                     </p>
+                    <p className="mt-1.5 text-xs text-white/80">{t('summary.officialHint')}</p>
 
                     <p className="mt-1.5 text-xs text-white/80">
                       {selectedPackage.duration

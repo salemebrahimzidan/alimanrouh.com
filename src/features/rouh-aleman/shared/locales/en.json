@@ -50,7 +50,8 @@
     "submit": "Submit",
     "sending": "Sending",
     "success": "Sent successfully",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "catalogError": "Published programs could not be loaded. Please try again."
   },
   "navbar": {
     "bookNow": "Book now",

@@ -1,28 +1,13 @@
 import { AlertCircle, CheckCircle2, X } from 'lucide-react'
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react'
-
-type ToastVariant = 'success' | 'error'
-
-type ToastItem = {
-  id: number
-  variant: ToastVariant
-  message: string
-}
-
-type ToastContextValue = {
-  showToast: (variant: ToastVariant, message: string) => void
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null)
+import { ToastContext, type ToastItem, type ToastVariant } from './toast-context'
 
 const AUTO_DISMISS_MS = 5000
 
@@ -89,12 +74,4 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: () => vo
       </button>
     </div>
   )
-}
-
-export function useToast() {
-  const ctx = useContext(ToastContext)
-  if (!ctx) {
-    throw new Error('useToast must be used within ToastProvider')
-  }
-  return ctx
 }

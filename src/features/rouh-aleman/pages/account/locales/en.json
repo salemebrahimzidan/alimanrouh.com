@@ -1,0 +1,126 @@
+{
+  "loading": "Loading...",
+  "empty": "Nothing here yet.",
+  "save": "Save",
+  "send": "Send",
+  "pending": "Please wait...",
+  "saved": "Saved.",
+  "sent": "Sent. The request will appear in the admin dashboard.",
+  "signOut": "Sign out",
+  "back": "Back",
+  "open": "Open",
+  "remove": "Delete",
+  "config": {
+    "title": "Connection is not configured",
+    "body": "The browser could not reach the database.",
+    "hint": "Add the project URL and the public key to the environment file, then restart the site."
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginSubtitle": "Open your account to follow bookings and requests.",
+    "loginAction": "Sign in",
+    "registerTitle": "Create an account",
+    "registerSubtitle": "Name, mobile, email, and password. Registration never grants administrator access.",
+    "registerAction": "Create account",
+    "confirmEmail": "A confirmation message was sent. After you confirm, your account appears in the customer list automatically.",
+    "forgot": "Forgot your password?",
+    "forgotTitle": "Reset your password",
+    "forgotSubtitle": "We will email a link if the account exists.",
+    "sendReset": "Send link",
+    "resetSent": "If the email is registered, a reset message is on its way.",
+    "resetTitle": "New password",
+    "resetSubtitle": "Choose a password of at least 8 characters.",
+    "resetMissing": "This reset link is invalid or has expired.",
+    "savePassword": "Save password",
+    "createAccount": "Create an account",
+    "haveAccount": "I already have an account",
+    "backToLogin": "Back to sign in",
+    "invalidLogin": "Enter a valid email and a password of at least 8 characters.",
+    "invalidRegister": "Enter a valid name, mobile number, and email. The mobile number must be 20 characters or fewer.",
+    "invalidEmail": "Enter a valid email address.",
+    "passwordMismatch": "The password must be at least 8 characters and match the confirmation.",
+    "pending": "Please wait..."
+  },
+  "fields": {
+    "fullName": "Full name",
+    "mobile": "Mobile number",
+    "mobilePlaceholder": "Enter your mobile number",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "travelDate": "Travel date",
+    "travelers": "Travelers",
+    "note": "Note",
+    "passport": "Passport number",
+    "nationality": "Nationality",
+    "message": "Message",
+    "program": "Program",
+    "file": "File"
+  },
+  "nav": {
+    "overview": "Overview",
+    "profile": "Profile",
+    "bookings": "Bookings",
+    "visas": "Visas",
+    "documents": "Documents",
+    "inquiries": "Hajj inquiries"
+  },
+  "overview": {
+    "title": "My account",
+    "subtitle": "Your details and bookings as the agency team sees them.",
+    "status": "Account status",
+    "recent": "Recent bookings",
+    "viewAll": "All bookings"
+  },
+  "profile": {
+    "title": "Profile",
+    "hint": "You can edit your name and mobile number. Account status and email are controlled by confirmation and the agency.",
+    "emailLocked": "Email is tied to sign-in and is not changed here."
+  },
+  "bookings": {
+    "title": "My bookings",
+    "subtitle": "You can follow the status. Only the agency can change it.",
+    "empty": "No bookings yet.",
+    "reference": "Reference",
+    "package": "Package",
+    "date": "Travel date",
+    "travelers": "Travelers",
+    "total": "Amount",
+    "status": "Status",
+    "note": "Your note",
+    "history": "Status history",
+    "payments": "Recorded payments",
+    "noPayments": "No payments are recorded for this booking.",
+    "missing": "This booking was not found."
+  },
+  "visas": {
+    "title": "Visa requests",
+    "subtitle": "This is the agency's internal follow-up, not an official visa decision.",
+    "new": "New request",
+    "empty": "No visa requests.",
+    "missing": "This request was not found.",
+    "invalid": "Complete the name, mobile, passport, and nationality. The passport number must be 4 to 20 characters."
+  },
+  "documents": {
+    "title": "Documents",
+    "subtitle": "PDF, JPG, PNG, or WebP, up to 10 MB. Files stay private to your account.",
+    "empty": "No documents.",
+    "uploaded": "File uploaded.",
+    "removed": "File removed."
+  },
+  "inquiries": {
+    "title": "Hajj inquiries",
+    "subtitle": "An inquiry is a contact request, not a confirmed booking or an official Hajj permit.",
+    "empty": "No inquiries.",
+    "general": "General inquiry",
+    "invalid": "Write a message and choose 1 to 100 travelers."
+  },
+  "payments": {
+    "cash": "Cash",
+    "bank_transfer": "Bank transfer",
+    "pos": "Card terminal",
+    "other": "Other",
+    "recorded": "Recorded",
+    "void": "Void"
+  }
+}
