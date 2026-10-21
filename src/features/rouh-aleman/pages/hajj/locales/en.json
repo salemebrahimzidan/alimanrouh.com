@@ -34,7 +34,9 @@
     "flexible": "Flexible duration",
     "badge": "Hajj",
     "currency": "SAR",
-    "book": "Book now"
+    "book": "Book now",
+    "inquire": "Send an inquiry",
+    "priceOnRequest": "Price on request"
   },
   "journey": {
     "eyebrow": "The Hajj journey",
@@ -46,6 +48,12 @@
       "2": { "day": "10 Dhul Hijjah", "title": "Day of Sacrifice", "subtitle": "Stone Jamarat al-Aqabah, offer the sacrifice, shave or trim, and perform Tawaf al-Ifadah." },
       "3": { "day": "11–13 Dhul Hijjah", "title": "Days of Tashreeq", "subtitle": "Stay in Mina and stone the three Jamarat, then perform the farewell Tawaf." }
     }
+  },
+  "inquiry": {
+    "eyebrow": "Inquiry",
+    "title": "Ask about a Hajj program",
+    "disclaimer": "Program information and inquiries are managed by the agency. They are not an official Hajj quota, approval, or license.",
+    "action": "Send an inquiry from my account"
   },
   "faq": {
     "eyebrow": "FAQ",

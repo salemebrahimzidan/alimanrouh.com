@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { getPackages, type PackageItem } from '../../../../services/packages'
+import { listPublishedUmrahPackages, type PublicPackage } from '../../../../lib/catalog'
 import { useInView } from '../../shared/hooks/useInView'
 import { CountUp } from '../../shared/ui/CountUp'
-import { getPackageImageUrl, isHajjPackage } from '../../shared/utils/packages'
 import {
   ArrowLeft,
   ArrowRight,
@@ -81,18 +80,26 @@ export function HomePage() {
   }, [ts])
 
   const phone = ts('company.phone')
-  const [packages, setPackages] = useState<PackageItem[]>([])
+  const [packages, setPackages] = useState<PublicPackage[]>([])
   const [loadingPackages, setLoadingPackages] = useState(true)
+  const [packageError, setPackageError] = useState(false)
 
   useEffect(() => {
-    getPackages()
+    let active = true
+    listPublishedUmrahPackages()
       .then((data) => {
-        setPackages(data.filter((item) => item.isActive).slice(0, 4))
+        if (active) setPackages(data.slice(0, 4))
       })
       .catch((error) => {
         console.error('Failed to load packages', error)
+        if (active) setPackageError(true)
       })
-      .finally(() => setLoadingPackages(false))
+      .finally(() => {
+        if (active) setLoadingPackages(false)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   const destinations = useMemo(
@@ -228,22 +235,26 @@ export function HomePage() {
                   </div>
                 </div>
               ))
+            ) : packageError ? (
+              <div className="col-span-full rounded-2xl border border-dashed border-(--ra-border) bg-white p-10 text-center text-sm font-medium text-(--ra-muted)">
+                {ts('ui.catalogError')}
+              </div>
             ) : packages.length === 0 ? (
               <div className="col-span-full rounded-2xl border border-dashed border-(--ra-border) bg-white p-10 text-center text-sm font-medium text-(--ra-muted)">
                 {t('featuredPrograms.empty')}
               </div>
             ) : (
               packages.map((pkg) => {
-                const hajj = isHajjPackage(pkg)
-                const fallback = hajj ? PACKAGE_FALLBACK.hajj : PACKAGE_FALLBACK.umrah
+                const fallback = PACKAGE_FALLBACK.umrah
+                const image = pkg.imageUrl ?? fallback
                 return (
                   <article
                     key={pkg.id}
                     className="group flex flex-col rounded-2xl border border-(--ra-border) bg-white p-2.5 shadow-[0_1px_2px_rgba(2,6,23,0.04),0_14px_36px_-14px_rgba(6,51,39,0.16)] transition duration-300 hover:border-(--ra-gold)/40 hover:shadow-[0_1px_2px_rgba(2,6,23,0.04),0_22px_48px_-14px_rgba(6,51,39,0.24)] motion-safe:hover:-translate-y-1"
                   >
-                    <Link to="/booking" className="relative block aspect-4/3 overflow-hidden rounded-xl bg-(--ra-bg)">
+                    <Link to={`/booking?package=${pkg.id}`} className="relative block aspect-4/3 overflow-hidden rounded-xl bg-(--ra-bg)">
                       <img
-                        src={getPackageImageUrl(pkg.imageUrl, fallback)}
+                        src={image}
                         alt={pkg.title}
                         loading="lazy"
                         decoding="async"
@@ -255,7 +266,7 @@ export function HomePage() {
                       <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/55 via-black/5 to-transparent" aria-hidden="true" />
                       <span className="absolute top-3 inset-s-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-(--ra-green) shadow-sm backdrop-blur-sm">
                         <span className="h-1.5 w-1.5 rounded-full bg-(--ra-gold)" aria-hidden="true" />
-                        {hajj ? t('featuredPrograms.hajj') : t('featuredPrograms.umrah')}
+                        {t('featuredPrograms.umrah')}
                       </span>
                       <span className="absolute bottom-3 inset-s-3 inline-flex items-center gap-1.5 text-xs font-semibold text-white">
                         <Clock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -271,12 +282,12 @@ export function HomePage() {
                         <div className="min-w-0">
                           <div className="text-[11px] font-medium text-(--ra-muted)">{t('featuredPrograms.from')}</div>
                           <div className="mt-0.5 flex items-baseline gap-1 text-xl font-extrabold leading-none text-(--ra-green) tabular-nums">
-                            {Number(pkg.price).toLocaleString('en-US')}
+                          {Number(pkg.price ?? 0).toLocaleString('en-US')}
                             <span className="text-xs font-bold text-(--ra-gold)">{t('featuredPrograms.currency')}</span>
                           </div>
                         </div>
                         <Link
-                          to="/booking"
+                          to={`/booking?package=${pkg.id}`}
                           className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-(--ra-green) px-3.5 py-2.5 text-xs font-semibold text-white shadow-[0_8px_18px_-8px_rgba(6,51,39,0.6)] transition hover:bg-(--ra-green-2)"
                         >
                           {t('featuredPrograms.bookNow')}

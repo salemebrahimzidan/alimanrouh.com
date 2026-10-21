@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { CalendarDays, Mail, Menu, Phone } from 'lucide-react'
+import { CalendarDays, Mail, Menu, Phone, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../../auth/auth-context'
 import { useScrolled } from '../hooks/useScrolled'
 import { LanguageDropdown, LanguageSwitcher } from './LanguageSwitcher'
 import { LtrText } from './LtrText'
@@ -81,10 +82,18 @@ function NavbarContacts() {
 
 function NavbarActions() {
   const { t } = useTranslation('shared')
+  const { session } = useAuth()
 
   return (
     <div className="flex shrink-0 items-center gap-2.5">
       <LanguageSwitcher tone="light" showLabel={false} />
+      <Link
+        to={session ? '/account' : '/login'}
+        className={[navPhoneButtonClass, 'h-9 w-9'].join(' ')}
+        aria-label={t('navbar.account')}
+      >
+        <UserRound className="h-4 w-4" aria-hidden="true" />
+      </Link>
       <Link
         to="/booking"
         className={[bookNowButtonClass, 'group h-9 px-3.5 text-sm sm:px-4'].join(' ')}

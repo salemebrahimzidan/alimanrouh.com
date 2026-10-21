@@ -1,12 +1,21 @@
 {
   "header": {
     "title": "Book Your Trip",
-    "subtitle": "Fill in your details and our team will contact you shortly to complete the reservation."
+    "subtitle": "Sign in, then choose a package and travel date. The booking is saved to your account and appears in the admin dashboard."
   },
   "success": {
     "title": "Your booking has been received",
     "message": "Thank you. Our team will contact you shortly to confirm your trip details.",
-    "action": "Create another booking"
+    "action": "Create another booking",
+    "reference": "Booking reference",
+    "view": "View my bookings"
+  },
+  "auth": {
+    "required": "Booking is available to confirmed accounts only.",
+    "login": "Sign in",
+    "register": "Create an account",
+    "inactive": "Your account is waiting for email confirmation or is suspended, so it cannot create a booking.",
+    "loadingProfile": "Loading your account..."
   },
   "form": {
     "title": "Reservation form",
@@ -14,7 +23,7 @@
     "sections": {
       "details": {
         "title": "Your details",
-        "description": "How can we reach you to confirm your booking?"
+            "description": "Contact details come from your confirmed account."
       },
       "trip": {
         "title": "Trip details",
@@ -57,13 +66,15 @@
       "travelDate": "Travel date is required",
       "package": "Please select a package",
       "loadPackages": "Failed to load packages",
-      "submitFailed": "Failed to send booking. Please try again."
+      "submitFailed": "Failed to send booking. Please try again.",
+      "travelers": "The number of travelers must be between 1 and 100."
     }
   },
   "summary": {
     "title": "Selected Package",
     "noDescription": "No description available.",
     "estimatedPrice": "Estimated Price",
+    "officialHint": "The final amount is calculated from the published package price and traveler count when the booking is saved.",
     "durationNotSpecified": "Duration not specified",
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",

@@ -33,6 +33,7 @@ void i18n.use(initReactI18next).init({
     'contact',
     'about',
     'booking',
+    'account',
   ],
   interpolation: { escapeValue: false },
 })

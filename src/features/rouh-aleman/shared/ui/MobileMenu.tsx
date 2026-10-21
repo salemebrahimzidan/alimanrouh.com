@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../../auth/auth-context'
 import { CompanyLogo } from './CompanyLogo'
 import { MainNavLinks } from './MainNavLinks'
 
@@ -11,6 +13,7 @@ type Props = {
 
 export function MobileMenu({ open, onClose }: Props) {
   const { t } = useTranslation('shared')
+  const { session } = useAuth()
 
   useEffect(() => {
     if (!open) return
@@ -62,6 +65,13 @@ export function MobileMenu({ open, onClose }: Props) {
           aria-label="Main"
         >
           <MainNavLinks onNavigate={onClose} />
+          <Link
+            to={session ? '/account' : '/login'}
+            onClick={onClose}
+            className="mt-2 rounded-xl px-3 py-3 text-sm font-semibold text-(--ra-green) hover:bg-(--ra-bg)"
+          >
+            {t('navbar.account')}
+          </Link>
         </nav>
       </div>
     </div>

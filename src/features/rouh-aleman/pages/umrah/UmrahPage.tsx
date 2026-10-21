@@ -16,9 +16,8 @@ import {
   Plane,
   Sparkles,
 } from 'lucide-react'
-import { getPackages, type PackageItem } from '../../../../services/packages'
+import { listPublishedUmrahPackages, type PublicPackage } from '../../../../lib/catalog'
 import { useLanguage } from '../../shared/hooks/useLanguage'
-import { getPackageImageUrl, isHajjPackage } from '../../shared/utils/packages'
 
 // Separate RTL photo instead of mirroring: a flipped Kaaba would reverse its calligraphy and door.
 const HERO_IMAGE = { en: '/images/umrah/umrah-hero.jpg', ar: '/images/umrah/umrah-hero-rtl.jpg' } as const
@@ -32,18 +31,30 @@ export function UmrahPage() {
   const { t } = useTranslation('umrah')
   const { t: ts } = useTranslation('shared')
   const { language } = useLanguage()
-  const [packages, setPackages] = useState<PackageItem[]>([])
+  const [packages, setPackages] = useState<PublicPackage[]>([])
   const [loadingPackages, setLoadingPackages] = useState(true)
+  const [packageError, setPackageError] = useState(false)
 
   const phone = ts('company.phone')
   const waHref = useMemo(() => `https://wa.me/${phone.replace(/\D/g, '')}`, [phone])
   const telHref = `tel:${phone.replace(/\s/g, '')}`
 
   useEffect(() => {
-    getPackages()
-      .then((data) => setPackages(data.filter((item) => item.isActive && !isHajjPackage(item))))
-      .catch((error) => console.error('Failed to load packages', error))
-      .finally(() => setLoadingPackages(false))
+    let active = true
+    listPublishedUmrahPackages()
+      .then((data) => {
+        if (active) setPackages(data)
+      })
+      .catch((error) => {
+        console.error('Failed to load packages', error)
+        if (active) setPackageError(true)
+      })
+      .finally(() => {
+        if (active) setLoadingPackages(false)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   return (
@@ -140,6 +151,10 @@ export function UmrahPage() {
               <div className="col-span-full rounded-[20px] border border-(--ra-border) bg-white p-10 text-center text-sm font-semibold text-(--ra-muted)">
                 {t('packages.loading')}
               </div>
+            ) : packageError ? (
+              <div className="col-span-full rounded-[20px] border border-(--ra-border) bg-white p-10 text-center text-sm font-semibold text-(--ra-muted)">
+                {ts('ui.catalogError')}
+              </div>
             ) : packages.length === 0 ? (
               <div className="col-span-full rounded-[20px] border border-(--ra-border) bg-white p-10 text-center text-sm font-semibold text-(--ra-muted)">
                 {t('packages.empty')}
@@ -152,7 +167,7 @@ export function UmrahPage() {
                 >
                   <div className="relative aspect-4/3 overflow-hidden">
                     <img
-                      src={getPackageImageUrl(pkg.imageUrl, IMAGE_FALLBACK)}
+                      src={pkg.imageUrl ?? IMAGE_FALLBACK}
                       alt={pkg.title}
                       loading="lazy"
                       decoding="async"
@@ -175,10 +190,10 @@ export function UmrahPage() {
                     </div>
                     <div className="mt-auto flex items-end justify-between gap-3 border-t border-(--ra-border)/80 pt-4">
                       <div className="text-lg font-bold tabular-nums text-(--ra-gold)">
-                        {t('packages.currency')} {pkg.price.toLocaleString()}
+                        {t('packages.currency')} {(pkg.price ?? 0).toLocaleString()}
                       </div>
                       <Link
-                        to="/booking"
+                        to={`/booking?package=${pkg.id}`}
                         className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-(--ra-green) px-4 py-2 text-xs font-semibold text-white transition hover:bg-(--ra-green-2)"
                       >
                         {t('packages.book')}

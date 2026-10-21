@@ -17,8 +17,7 @@ import {
   Sparkles,
   Tent,
 } from 'lucide-react'
-import { getPackages, type PackageItem } from '../../../../services/packages'
-import { getPackageImageUrl, isHajjPackage } from '../../shared/utils/packages'
+import { listPublishedHajjPrograms, type PublicPackage } from '../../../../lib/catalog'
 
 const HERO_IMAGE = '/images/hajj/hajj-hero.jpg'
 const IMAGE_FALLBACK = '/images/home/hajj-package-1.png'
@@ -31,18 +30,30 @@ const FAQ_COUNT = 5
 export function HajjPage() {
   const { t } = useTranslation('hajj')
   const { t: ts } = useTranslation('shared')
-  const [packages, setPackages] = useState<PackageItem[]>([])
+  const [packages, setPackages] = useState<PublicPackage[]>([])
   const [loadingPackages, setLoadingPackages] = useState(true)
+  const [packageError, setPackageError] = useState(false)
 
   const phone = ts('company.phone')
   const waHref = useMemo(() => `https://wa.me/${phone.replace(/\D/g, '')}`, [phone])
   const telHref = `tel:${phone.replace(/\s/g, '')}`
 
   useEffect(() => {
-    getPackages()
-      .then((data) => setPackages(data.filter((item) => item.isActive && isHajjPackage(item))))
-      .catch((error) => console.error('Failed to load packages', error))
-      .finally(() => setLoadingPackages(false))
+    let active = true
+    listPublishedHajjPrograms()
+      .then((data) => {
+        if (active) setPackages(data)
+      })
+      .catch((error) => {
+        console.error('Failed to load packages', error)
+        if (active) setPackageError(true)
+      })
+      .finally(() => {
+        if (active) setLoadingPackages(false)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   return (
@@ -87,7 +98,7 @@ export function HajjPage() {
               </ul>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
-                  to="/booking"
+                  to="#hajj-inquiry"
                   className="inline-flex items-center gap-2 rounded-2xl bg-(--ra-gold) px-7 py-3.5 text-sm font-semibold text-(--ra-green) shadow-[0_18px_44px_rgba(198,160,74,0.35)] transition motion-safe:hover:-translate-y-0.5"
                 >
                   <CalendarDays className="h-4 w-4" aria-hidden="true" />
@@ -179,7 +190,11 @@ export function HajjPage() {
             <div className="col-span-full rounded-[20px] border border-(--ra-border) bg-white p-10 text-center text-sm font-semibold text-(--ra-muted)">
               {t('packages.loading')}
             </div>
-          ) : packages.length === 0 ? (
+            ) : packageError ? (
+              <div className="col-span-full rounded-[20px] border border-(--ra-border) bg-white p-10 text-center text-sm font-semibold text-(--ra-muted)">
+                {ts('ui.catalogError')}
+              </div>
+            ) : packages.length === 0 ? (
             <div className="col-span-full rounded-[20px] border border-(--ra-border) bg-white p-10 text-center text-sm font-semibold text-(--ra-muted)">
               {t('packages.empty')}
             </div>
@@ -191,7 +206,7 @@ export function HajjPage() {
               >
                 <div className="relative aspect-4/3 overflow-hidden">
                   <img
-                    src={getPackageImageUrl(pkg.imageUrl, IMAGE_FALLBACK)}
+                    src={pkg.imageUrl ?? IMAGE_FALLBACK}
                     alt={pkg.title}
                     loading="lazy"
                     decoding="async"
@@ -214,13 +229,13 @@ export function HajjPage() {
                   </div>
                   <div className="mt-auto flex items-end justify-between gap-3 border-t border-(--ra-border)/80 pt-4">
                     <div className="text-lg font-bold tabular-nums text-(--ra-gold)">
-                      {t('packages.currency')} {pkg.price.toLocaleString()}
+                      {pkg.price == null ? t('packages.priceOnRequest') : `${t('packages.currency')} ${pkg.price.toLocaleString()}`}
                     </div>
                     <Link
-                      to="/booking"
+                      to={`/account/inquiries?program=${pkg.id}`}
                       className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-(--ra-green) px-4 py-2 text-xs font-semibold text-white transition hover:bg-(--ra-green-2)"
                     >
-                      {t('packages.book')}
+                      {t('packages.inquire')}
                       <ArrowRight className="h-3.5 w-3.5 rtl:hidden" aria-hidden="true" />
                       <ArrowLeft className="hidden h-3.5 w-3.5 rtl:inline" aria-hidden="true" />
                     </Link>
@@ -230,6 +245,18 @@ export function HajjPage() {
             ))
           )}
         </div>
+      </section>
+
+      <section id="hajj-inquiry" className="mx-auto max-w-3xl rounded-[24px] border border-(--ra-border) bg-white p-6 text-start shadow-[0_14px_40px_rgba(2,6,23,0.06)] sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-(--ra-gold)">{t('inquiry.eyebrow')}</p>
+        <h2 className="mt-2 text-2xl font-bold text-(--ra-green)">{t('inquiry.title')}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-(--ra-muted)">{t('inquiry.disclaimer')}</p>
+        <Link
+          to="/account/inquiries"
+          className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-(--ra-green) px-6 py-3 text-sm font-semibold text-white"
+        >
+          {t('inquiry.action')}
+        </Link>
       </section>
 
       {/* FAQ */}
@@ -265,7 +292,7 @@ export function HajjPage() {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:shrink-0">
             <Link
-              to="/booking"
+              to="#hajj-inquiry"
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-(--ra-gold) px-7 py-3.5 text-sm font-semibold text-(--ra-green) shadow-lg transition motion-safe:hover:-translate-y-0.5"
             >
               {t('cta.primary')}
