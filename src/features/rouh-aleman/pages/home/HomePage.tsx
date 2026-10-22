@@ -74,12 +74,11 @@ export function HomePage() {
   const [heroFailed, setHeroFailed] = useState(false)
   const { ref: statsRef, inView: statsInView } = useInView<HTMLDivElement>()
 
-  const waHref = useMemo(() => {
-    const d = digitsOnly(ts('company.phone'))
-    return d ? `https://wa.me/${d}` : 'https://wa.me/'
-  }, [ts])
-
   const phone = ts('company.phone')
+  const waHref = useMemo(() => {
+    const d = digitsOnly(phone)
+    return d ? `https://wa.me/${d}` : 'https://wa.me/'
+  }, [phone])
   const [packages, setPackages] = useState<PublicPackage[]>([])
   const [loadingPackages, setLoadingPackages] = useState(true)
   const [packageError, setPackageError] = useState(false)

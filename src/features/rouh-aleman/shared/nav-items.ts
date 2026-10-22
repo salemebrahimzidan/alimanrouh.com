@@ -14,7 +14,7 @@ export const MAIN_NAV = [
   { to: '/', key: 'nav.home', shortKey: 'nav.home', tier: 'primary' },
   { to: '/umrah', key: 'nav.umrah', shortKey: 'nav.umrah', tier: 'primary' },
   { to: '/hajj', key: 'nav.hajj', shortKey: 'nav.hajj', tier: 'primary' },
-  { to: '/tourism', key: 'nav.destinations', shortKey: 'nav.tourism', tier: 'primary' },
+  { to: '/tourism', key: 'nav.tourism', shortKey: 'nav.tourism', tier: 'primary' },
   { to: '/flights', key: 'nav.flights', shortKey: 'nav.flights', tier: 'primary' },
   // —— More dropdown ——
   { to: '/about', key: 'nav.about', shortKey: 'nav.about', tier: 'more' },
