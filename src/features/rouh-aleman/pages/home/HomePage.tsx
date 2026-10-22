@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { listPublishedUmrahPackages, type PublicPackage } from '../../../../lib/catalog'
 import { useInView } from '../../shared/hooks/useInView'
+import { HomePromos } from '../../shared/ui/PublishedContent'
 import { CountUp } from '../../shared/ui/CountUp'
 import {
   ArrowLeft,
@@ -176,6 +177,8 @@ export function HomePage() {
           </div>
         </div>
       </section>
+
+      <HomePromos />
 
       {/* Value props */}
       <section className="mx-auto grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">

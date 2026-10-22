@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { OfferCards } from '../../shared/ui/PublishedContent'
 
 export function OffersPage() {
   const { t } = useTranslation('offers')
@@ -10,15 +11,12 @@ export function OffersPage() {
         <p className="mt-1 text-sm text-(--ra-muted)">{t('subtitle')}</p>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-3xl border border-(--ra-border) bg-white p-6 shadow-(--ra-shadow)">
-          <div className="text-sm font-semibold text-(--ra-black)">{t('seasonal.title')}</div>
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-(--ra-black)">{t('seasonal.title')}</h2>
           <p className="mt-1 text-sm text-(--ra-muted)">{t('seasonal.subtitle')}</p>
         </div>
-        <div className="rounded-3xl border border-(--ra-border) bg-white p-6 shadow-(--ra-shadow)">
-          <div className="text-sm font-semibold text-(--ra-black)">{t('cards.title')}</div>
-          <p className="mt-1 text-sm text-(--ra-muted)">{t('cards.subtitle')}</p>
-        </div>
+        <OfferCards />
       </section>
     </div>
   )
