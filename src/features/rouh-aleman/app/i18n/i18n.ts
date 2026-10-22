@@ -16,7 +16,7 @@ function applyDocumentDirection(lang: AppLanguage) {
   document.documentElement.lang = lang
 }
 
-const i18nReady = i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   resources,
   lng: getInitialLanguage(),
   fallbackLng: 'en',
@@ -36,9 +36,6 @@ const i18nReady = i18n.use(initReactI18next).init({
     'account',
   ],
   interpolation: { escapeValue: false },
-  react: {
-    bindI18n: 'languageChanged added',
-  },
 })
 
 applyDocumentDirection(i18n.language as AppLanguage)
@@ -48,4 +45,4 @@ i18n.on('languageChanged', (lng) => {
   applyDocumentDirection(lang)
 })
 
-export { i18n, i18nReady, LANGUAGE_STORAGE_KEY }
+export { i18n, LANGUAGE_STORAGE_KEY }

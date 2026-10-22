@@ -49,41 +49,6 @@ export async function listPublishedUmrahPackages() {
   return (data ?? []).map((row) => mapPackage(row, true)).filter((row) => row.id && row.title)
 }
 
-export type PublicContent = {
-  id: string
-  kind: string
-  title: string
-  body: string
-  imageUrl: string | null
-  linkUrl: string | null
-  sortOrder: number
-}
-
-export async function listPublishedContent() {
-  const { data, error } = await requireDb()
-    .from('website_content')
-    .select('id, kind, title, body, image_path, link_url, sort_order')
-    .eq('is_published', true)
-    .order('sort_order', { ascending: true })
-  if (error) throw error
-  return (data ?? []).flatMap((item) => {
-    const row = asRecord(item)
-    const id = text(row.id)
-    const title = text(row.title)
-    if (!id || !title || title.startsWith('site:')) return []
-    const link = text(row.link_url)
-    return [{
-      id,
-      kind: text(row.kind),
-      title,
-      body: text(row.body),
-      imageUrl: mediaUrl(typeof row.image_path === 'string' ? row.image_path : null),
-      linkUrl: link.startsWith('https://') ? link : null,
-      sortOrder: asNumber(row.sort_order),
-    }]
-  })
-}
-
 export async function listPublishedHajjPrograms() {
   const { data, error } = await requireDb()
     .from('hajj_programs')

@@ -4,23 +4,19 @@ import { ChevronLeft, ChevronRight, Clock, Mail, MapPin, Phone } from 'lucide-re
 import { siFacebook, siInstagram, siSnapchat, siTiktok, siWhatsapp, siX, siYoutube, type SimpleIcon } from 'simple-icons'
 import { LtrText } from './LtrText'
 
-/** Icons without an https URL render as non-clickable placeholders. */
-const SOCIAL_LINKS: Array<{ icon: SimpleIcon; key: string; tone: string }> = [
+/** Icons without an href render as non-clickable placeholders until the account URL is set. */
+const SOCIAL_LINKS: Array<{ icon: SimpleIcon; href: string; tone: string }> = [
   {
     icon: siInstagram,
-    key: 'instagram',
+    href: '',
     tone: 'bg-[radial-gradient(circle_at_30%_107%,#fdf497_0%,#fdf497_5%,#fd5949_45%,#d6249f_60%,#285aeb_90%)] text-white',
   },
-  { icon: siFacebook, key: 'facebook', tone: 'bg-[#0866ff] text-white' },
-  { icon: siX, key: 'x', tone: 'bg-black text-white' },
-  { icon: siTiktok, key: 'tiktok', tone: 'bg-black text-white' },
-  { icon: siSnapchat, key: 'snapchat', tone: 'bg-[#fffc00] text-black ring-1 ring-black/10' },
-  { icon: siYoutube, key: 'youtube', tone: 'bg-[#ff0000] text-white' },
+  { icon: siFacebook, href: '', tone: 'bg-[#0866ff] text-white' },
+  { icon: siX, href: '', tone: 'bg-black text-white' },
+  { icon: siTiktok, href: '', tone: 'bg-black text-white' },
+  { icon: siSnapchat, href: '', tone: 'bg-[#fffc00] text-black ring-1 ring-black/10' },
+  { icon: siYoutube, href: '', tone: 'bg-[#ff0000] text-white' },
 ]
-
-function httpsUrl(value: string) {
-  return value.startsWith('https://') ? value : ''
-}
 
 const socialBaseClass =
   'grid h-10 w-10 place-items-center rounded-full shadow-[0_6px_16px_-8px_rgba(2,6,23,0.45)] transition duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_10px_22px_-8px_rgba(2,6,23,0.5)]'
@@ -157,9 +153,8 @@ export function Footer() {
               >
                 <BrandIcon icon={siWhatsapp} />
               </a>
-              {SOCIAL_LINKS.map(({ icon, key, tone }) => {
-                const href = httpsUrl(t(`company.social.${key}`, { defaultValue: '' }))
-                return href ? (
+              {SOCIAL_LINKS.map(({ icon, href, tone }) =>
+                href ? (
                   <a
                     key={icon.slug}
                     href={href}
@@ -174,25 +169,22 @@ export function Footer() {
                   <span key={icon.slug} className={`${socialBaseClass} ${tone}`} title={icon.title}>
                     <BrandIcon icon={icon} />
                   </span>
-                )
-              })}
+                ),
+              )}
             </div>
           </div>
         </div>
       </div>
 
       <div className="relative border-t border-(--ra-border) bg-white">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-5 sm:px-6">
-          <p className="text-center text-sm text-(--ra-muted)">{t('footer.subheadline')}</p>
-          <div className="flex flex-col items-center justify-between gap-2 text-xs sm:flex-row">
-            <span className="text-(--ra-muted)">
-              © {year} {t('brand.name')} — {t('footer.rights')}
-            </span>
-            <span className="inline-flex items-center gap-2 font-semibold text-(--ra-gold)">
-              <span className="h-1 w-1 rounded-full bg-(--ra-gold)" aria-hidden="true" />
-              {t('footer.headline')}
-            </span>
-          </div>
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs sm:flex-row sm:px-6">
+          <span className="text-(--ra-muted)">
+            © {year} {t('brand.name')} — {t('footer.rights')}
+          </span>
+          <span className="inline-flex items-center gap-2 font-semibold text-(--ra-gold)">
+            <span className="h-1 w-1 rounded-full bg-(--ra-gold)" aria-hidden="true" />
+            {t('footer.headline')}
+          </span>
         </div>
       </div>
     </footer>
