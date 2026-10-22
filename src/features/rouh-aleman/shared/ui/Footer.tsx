@@ -6,6 +6,7 @@ import { LtrText } from './LtrText'
 
 /** Shown only when the CMS stores an https link. An empty field hides the icon. */
 const SOCIAL_LINKS: Array<{ icon: SimpleIcon; key: string; tone: string }> = [
+  { icon: siWhatsapp, key: 'whatsapp', tone: 'bg-[#25d366] text-white' },
   {
     icon: siInstagram,
     key: 'instagram',
@@ -149,15 +150,6 @@ export function Footer() {
           <div className="text-start lg:col-span-3">
             <FooterHeading>{t('footer.follow')}</FooterHeading>
             <div className="mt-5 flex flex-wrap items-center gap-2.5">
-              <a
-                href={`https://wa.me/${phone.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${socialBaseClass} bg-[#25d366] text-white`}
-                aria-label={siWhatsapp.title}
-              >
-                <BrandIcon icon={siWhatsapp} />
-              </a>
               {SOCIAL_LINKS.map(({ icon, key, tone }) => {
                 const href = socialHref(t(`company.social.${key}`, { defaultValue: '' }))
                 if (!href) return null
