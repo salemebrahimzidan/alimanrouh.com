@@ -4,18 +4,18 @@ import { ChevronLeft, ChevronRight, Clock, Mail, MapPin, Phone } from 'lucide-re
 import { siFacebook, siInstagram, siSnapchat, siTiktok, siWhatsapp, siX, siYoutube, type SimpleIcon } from 'simple-icons'
 import { LtrText } from './LtrText'
 
-/** Icons without an href render as non-clickable placeholders until the account URL is set. */
-const SOCIAL_LINKS: Array<{ icon: SimpleIcon; href: string; tone: string }> = [
+/** Shown only when the CMS stores an https link. An empty field hides the icon. */
+const SOCIAL_LINKS: Array<{ icon: SimpleIcon; key: string; tone: string }> = [
   {
     icon: siInstagram,
-    href: '',
+    key: 'instagram',
     tone: 'bg-[radial-gradient(circle_at_30%_107%,#fdf497_0%,#fdf497_5%,#fd5949_45%,#d6249f_60%,#285aeb_90%)] text-white',
   },
-  { icon: siFacebook, href: '', tone: 'bg-[#0866ff] text-white' },
-  { icon: siX, href: '', tone: 'bg-black text-white' },
-  { icon: siTiktok, href: '', tone: 'bg-black text-white' },
-  { icon: siSnapchat, href: '', tone: 'bg-[#fffc00] text-black ring-1 ring-black/10' },
-  { icon: siYoutube, href: '', tone: 'bg-[#ff0000] text-white' },
+  { icon: siFacebook, key: 'facebook', tone: 'bg-[#0866ff] text-white' },
+  { icon: siX, key: 'x', tone: 'bg-black text-white' },
+  { icon: siTiktok, key: 'tiktok', tone: 'bg-black text-white' },
+  { icon: siSnapchat, key: 'snapchat', tone: 'bg-[#fffc00] text-black ring-1 ring-black/10' },
+  { icon: siYoutube, key: 'youtube', tone: 'bg-[#ff0000] text-white' },
 ]
 
 const socialBaseClass =
@@ -41,6 +41,11 @@ const moreLinks = [
   { to: '/about', key: 'nav.about' },
   { to: '/contact', key: 'nav.contact' },
 ]
+
+function socialHref(value: string) {
+  const href = value.trim()
+  return /^https:\/\/\S+$/.test(href) ? href : ''
+}
 
 function telHref(phone: string) {
   return `tel:${phone.replace(/\s/g, '')}`
@@ -153,8 +158,10 @@ export function Footer() {
               >
                 <BrandIcon icon={siWhatsapp} />
               </a>
-              {SOCIAL_LINKS.map(({ icon, href, tone }) =>
-                href ? (
+              {SOCIAL_LINKS.map(({ icon, key, tone }) => {
+                const href = socialHref(t(`company.social.${key}`, { defaultValue: '' }))
+                if (!href) return null
+                return (
                   <a
                     key={icon.slug}
                     href={href}
@@ -165,12 +172,8 @@ export function Footer() {
                   >
                     <BrandIcon icon={icon} />
                   </a>
-                ) : (
-                  <span key={icon.slug} className={`${socialBaseClass} ${tone}`} title={icon.title}>
-                    <BrandIcon icon={icon} />
-                  </span>
-                ),
-              )}
+                )
+              })}
             </div>
           </div>
         </div>
