@@ -36,6 +36,9 @@ void i18n.use(initReactI18next).init({
     'account',
   ],
   interpolation: { escapeValue: false },
+  react: {
+    bindI18nStore: 'added removed',
+  },
 })
 
 applyDocumentDirection(i18n.language as AppLanguage)
