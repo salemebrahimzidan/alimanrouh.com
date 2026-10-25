@@ -7,7 +7,7 @@ const LANGUAGE_STORAGE_KEY = 'rouh-aleman:lang'
 function getInitialLanguage(): AppLanguage {
   const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY)
   if (saved === 'ar' || saved === 'en') return saved
-  return 'ar'
+  return 'en'
 }
 
 function applyDocumentDirection(lang: AppLanguage) {

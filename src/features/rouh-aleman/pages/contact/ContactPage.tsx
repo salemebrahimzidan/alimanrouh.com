@@ -1,5 +1,6 @@
 import { Clock, ExternalLink, Loader2, Mail, MapPin, Phone, Send } from 'lucide-react'
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { Country } from 'react-phone-number-input'
 import { useLanguage } from '../../shared/hooks/useLanguage'
@@ -9,6 +10,7 @@ import { useToast } from '../../shared/ui/toast-context'
 import { isValidInternationalPhone } from '../../shared/utils/phone'
 import { getMapsEmbedUrl, getMapsSearchUrl } from '../../shared/utils/maps'
 import { submitContactForm } from './submit-contact-form'
+import type { SupportTopic } from '../../../../lib/customer-data'
 
 type ContactFields = {
   name: string
@@ -18,8 +20,6 @@ type ContactFields = {
 }
 
 type FieldKey = keyof ContactFields
-
-const CONTACT_SERVICE = 'General inquiry'
 
 const EMPTY_FIELDS: ContactFields = {
   name: '',
@@ -127,9 +127,15 @@ export function ContactPage() {
   const { t: ts } = useTranslation('shared')
   const { showToast } = useToast()
   const { language } = useLanguage()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const formId = useId()
 
   const [fields, setFields] = useState<ContactFields>(EMPTY_FIELDS)
+  const [topic, setTopic] = useState<SupportTopic>(() => {
+    const requested = searchParams.get('topic')
+    return requested === 'general' || requested === 'hajj' || requested === 'umrah' || requested === 'booking' || requested === 'complaint' ? requested : 'contact'
+  })
   const [phoneCountry, setPhoneCountry] = useState<Country>('SA')
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({})
   const [sending, setSending] = useState(false)
@@ -152,6 +158,7 @@ export function ContactPage() {
     if (!isValidInternationalPhone(phone, phoneCountry)) next.phone = t('form.errors.phone')
     if (!isValidEmail(email)) next.email = t('form.errors.email')
     if (message.length < 10) next.message = t('form.errors.message')
+    if (message.length > 5000) next.message = t('form.errors.messageTooLong')
 
     return next
   }
@@ -196,10 +203,17 @@ export function ContactPage() {
     setSending(true)
 
     try {
-      await submitContactForm(formData)
+      const contextValue = searchParams.get('context')
+      const context = contextValue
+        ? `${topic === 'hajj' ? 'hajj_program_id' : topic === 'umrah' ? 'umrah_package_id' : 'reference'}=${contextValue}`.slice(0, 240)
+        : null
+      const result = await submitContactForm(formData, { topic, context })
       form.reset()
       setFields(EMPTY_FIELDS)
       showToast('success', t('form.success'))
+      navigate(result.guest
+        ? `/support/guest?id=${encodeURIComponent(result.conversationId)}`
+        : `/account/inquiries?conversation=${encodeURIComponent(result.conversationId)}`)
     } catch (err) {
       console.error('Contact form submission failed:', err)
       showToast('error', t('form.errors.submitFailed'))
@@ -236,8 +250,6 @@ export function ContactPage() {
 
           <ErrorSummary errors={errors} fieldIds={fieldIds} title={t('form.hint')} />
 
-          <input type="hidden" name="service" value={CONTACT_SERVICE} />
-
           <fieldset disabled={disabled} className="mt-3 grid gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <FormField id={fieldIds.name} label={t('form.name')} error={errors.name} className="min-w-0">
@@ -248,6 +260,7 @@ export function ContactPage() {
                   autoComplete="name"
                   required
                   minLength={2}
+                  maxLength={120}
                   value={fields.name}
                   onChange={(e) => updateField('name', e.target.value)}
                   placeholder={t('form.placeholders.name')}
@@ -268,6 +281,7 @@ export function ContactPage() {
                   disabled={disabled}
                   hasError={Boolean(errors.phone)}
                   compact
+                  maxLength={30}
                   defaultCountry="SA"
                   labelsLocale={language}
                   placeholder={t('form.placeholders.phone')}
@@ -288,6 +302,7 @@ export function ContactPage() {
                   type="email"
                   autoComplete="email"
                   required
+                  maxLength={254}
                   value={fields.email}
                   onChange={(e) => updateField('email', e.target.value)}
                   placeholder={t('form.placeholders.email')}
@@ -298,12 +313,29 @@ export function ContactPage() {
               </FormField>
             </div>
 
+            <label className="grid gap-1.5 text-xs font-semibold text-(--ra-muted)">
+              {t('form.topic')}
+              <select
+                value={topic}
+                onChange={(event) => setTopic(event.target.value as SupportTopic)}
+                className={inputOk}
+              >
+                <option value="contact">{t('form.topics.contact')}</option>
+                <option value="general">{t('form.topics.general')}</option>
+                <option value="hajj">{t('form.topics.hajj')}</option>
+                <option value="umrah">{t('form.topics.umrah')}</option>
+                <option value="booking">{t('form.topics.booking')}</option>
+                <option value="complaint">{t('form.topics.complaint')}</option>
+              </select>
+            </label>
+
             <FormField id={fieldIds.message} label={t('form.message')} error={errors.message}>
               <textarea
                 id={fieldIds.message}
                 name="message"
                 required
                 minLength={10}
+                maxLength={5000}
                 rows={4}
                 value={fields.message}
                 onChange={(e) => updateField('message', e.target.value)}

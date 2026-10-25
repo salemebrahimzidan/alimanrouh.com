@@ -18,6 +18,7 @@ import {
   Headphones,
   MapPin,
   MessageCircle,
+  MessageSquareText,
   Package,
   Phone,
   Smile,
@@ -559,9 +560,10 @@ export function HomePage() {
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-(--ra-muted) sm:text-base">{t('contactCta.subtitle')}</p>
           </div>
           <Link
-            to="/booking"
-            className="inline-flex justify-center rounded-2xl bg-(--ra-green) px-8 py-3.5 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(6,51,39,0.28)] transition motion-safe:hover:-translate-y-0.5 hover:bg-(--ra-green-2) md:min-w-[200px] md:justify-center"
+            to="/contact"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-(--ra-green) px-8 py-3.5 text-sm font-semibold text-white shadow-[0_16px_40px_rgba(6,51,39,0.28)] transition motion-safe:hover:-translate-y-0.5 hover:bg-(--ra-green-2) md:min-w-[200px] md:justify-center"
           >
+            <MessageSquareText className="h-4 w-4" aria-hidden="true" />
             {t('contactCta.action')}
           </Link>
         </div>

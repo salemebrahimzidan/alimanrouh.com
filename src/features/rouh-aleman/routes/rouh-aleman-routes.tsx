@@ -9,6 +9,7 @@ import { TourismPage } from '../pages/tourism/TourismPage'
 import { HotelsPage } from '../pages/hotels/HotelsPage'
 import { OffersPage } from '../pages/offers/OffersPage'
 import { ContactPage } from '../pages/contact/ContactPage'
+import { GuestSupportPage } from '../pages/account/GuestSupportPage'
 import { AboutPage } from '../pages/about/AboutPage'
 import { BookingPage } from '../pages/booking/BookingPage'
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from '../auth/auth-pages'
@@ -39,6 +40,7 @@ export function RouhAlemanRoutes() {
         <Route path="hotels" element={<HotelsPage />} />
         <Route path="offers" element={<OffersPage />} />
         <Route path="contact" element={<ContactPage />} />
+        <Route path="support/guest" element={<GuestSupportPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
@@ -59,4 +61,3 @@ export function RouhAlemanRoutes() {
     </Routes>
   )
 }
-

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
   authRedirectUrl,
@@ -10,6 +11,57 @@ import {
   safeNextPath,
   travelersCount,
 } from '../src/lib/customer-contract.ts'
+
+const publicAccountPage = readFileSync(
+  new URL('../src/features/rouh-aleman/pages/account/AccountPages.tsx', import.meta.url),
+  'utf8',
+)
+const contactSubmit = readFileSync(
+  new URL('../src/features/rouh-aleman/pages/contact/submit-contact-form.ts', import.meta.url),
+  'utf8',
+)
+const customerData = readFileSync(new URL('../src/lib/customer-data.ts', import.meta.url), 'utf8')
+const guestSupportPage = readFileSync(
+  new URL('../src/features/rouh-aleman/pages/account/GuestSupportPage.tsx', import.meta.url),
+  'utf8',
+)
+const hajjPage = readFileSync(
+  new URL('../src/features/rouh-aleman/pages/hajj/HajjPage.tsx', import.meta.url),
+  'utf8',
+)
+const umrahPage = readFileSync(
+  new URL('../src/features/rouh-aleman/pages/umrah/UmrahPage.tsx', import.meta.url),
+  'utf8',
+)
+
+test('website inquiry, Hajj, Umrah, and guest flows use the unified support RPCs', () => {
+  assert.match(publicAccountPage, /createOwnSupportConversation/)
+  assert.match(publicAccountPage, /listOwnSupportConversations/)
+  assert.match(publicAccountPage, /sendOwnSupportReply/)
+  assert.doesNotMatch(publicAccountPage, /\.from\(['"]hajj_inquiries['"]\)\.insert/)
+  assert.match(customerData, /support_create_registered_conversation/)
+  assert.match(contactSubmit, /createGuestSupportConversation/)
+  assert.match(hajjPage, /\/contact\?topic=hajj/)
+  assert.match(umrahPage, /\/contact\?topic=umrah/)
+  assert.doesNotMatch(contactSubmit, /web3forms/i)
+})
+
+test('guest support continuation uses a session-held bearer token and RPC polling, not table subscriptions', () => {
+  assert.match(customerData, /callGuestSupportGateway\('get'/)
+  assert.match(customerData, /callGuestSupportGateway\('reply'/)
+  assert.doesNotMatch(customerData, /\.rpc\(['"]support_guest_(?:get_conversation|reply)['"]/)
+  assert.match(customerData, /fetch\(['"]\/api\/support\/guest['"]/)
+  assert.match(customerData, /sessionStorage\.setItem/)
+  assert.match(customerData, /access_token/)
+  assert.match(guestSupportPage, /setInterval/)
+  assert.doesNotMatch(guestSupportPage, /\.channel\(/)
+  assert.doesNotMatch(guestSupportPage, /access_token.*(?:searchParams|URLSearchParams)/i)
+})
+
+test('guest creation is routed through the same-origin Vercel API', () => {
+  assert.match(customerData, /callGuestSupportGateway\('create'/)
+  assert.doesNotMatch(customerData, /\.rpc\(['"]support_create_guest_conversation['"]/)
+})
 
 test('registration metadata is only the name and mobile the profile trigger reads', () => {
   const metadata = registrationMetadata('  سارة أحمد  ', '  +966507075933  ')

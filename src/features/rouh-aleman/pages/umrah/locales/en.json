@@ -4,7 +4,8 @@
     "title": "Perform Umrah with peace of mind",
     "subtitle": "Visa, flights, hotels near the Haram, transport and guidance — we arrange every detail so you can focus on worship.",
     "primaryCta": "Book your Umrah",
-    "whatsappCta": "Ask on WhatsApp"
+    "whatsappCta": "Ask on WhatsApp",
+    "inquiryCta": "Send an inquiry"
   },
   "included": {
     "eyebrow": "What's included",
@@ -29,7 +30,8 @@
     "flexible": "Flexible duration",
     "badge": "Umrah",
     "currency": "SAR",
-    "book": "Book now"
+    "book": "Book now",
+    "inquire": "Ask a question"
   },
   "steps": {
     "eyebrow": "How it works",

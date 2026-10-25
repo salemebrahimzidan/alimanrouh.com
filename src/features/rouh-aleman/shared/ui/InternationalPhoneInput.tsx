@@ -15,6 +15,7 @@ type InternationalPhoneInputProps = {
   country?: Country
   labelsLocale?: 'en' | 'ar'
   compact?: boolean
+  maxLength?: number
   placeholder?: string
   'aria-invalid'?: boolean
   'aria-describedby'?: string
@@ -32,6 +33,7 @@ export function InternationalPhoneInput({
   country,
   labelsLocale = 'en',
   compact = false,
+  maxLength,
   placeholder,
   'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedBy,
@@ -55,6 +57,7 @@ export function InternationalPhoneInput({
         autoComplete: 'tel',
         'aria-invalid': ariaInvalid,
         'aria-describedby': ariaDescribedBy,
+        maxLength,
         className: 'PhoneInputInput',
       }}
       className={[
