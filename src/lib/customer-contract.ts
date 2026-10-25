@@ -134,22 +134,22 @@ export function asNumber(value: unknown) {
   return 0
 }
 
-export function formatMoney(value: number, language: AppLanguage) {
-  const amount = new Intl.NumberFormat(language === 'ar' ? 'ar-SA' : 'en-SA', {
+export function formatMoney(value: number, _language?: AppLanguage) {
+  const amount = new Intl.NumberFormat('en-GB', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value)
-  return language === 'ar' ? `${amount} ر.س` : `${amount} SAR`
+  return `${amount} SAR`
 }
 
-export function formatDate(value: string | null | undefined, language: AppLanguage) {
+export function formatDate(value: string | null | undefined, _language?: AppLanguage) {
   if (!value) return '—'
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   const date = dateOnly
     ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
     : new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat(language === 'ar' ? 'ar-SA' : 'en-SA', { dateStyle: 'medium' }).format(date)
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(date)
 }
 
 function label<T extends string>(labels: Record<T, Copy>, value: string, language: AppLanguage) {

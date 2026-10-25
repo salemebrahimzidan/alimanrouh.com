@@ -14,6 +14,7 @@ type InternationalPhoneInputProps = {
   defaultCountry?: Country
   country?: Country
   labelsLocale?: 'en' | 'ar'
+  compact?: boolean
   placeholder?: string
   'aria-invalid'?: boolean
   'aria-describedby'?: string
@@ -30,6 +31,7 @@ export function InternationalPhoneInput({
   defaultCountry = 'SA',
   country,
   labelsLocale = 'en',
+  compact = false,
   placeholder,
   'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedBy,
@@ -57,6 +59,7 @@ export function InternationalPhoneInput({
       }}
       className={[
         'PhoneInputField',
+        compact ? 'PhoneInputField--compact PhoneInputField--brand' : '',
         hasError ? 'PhoneInputField--error' : '',
         disabled ? 'PhoneInputField--disabled' : '',
       ]
