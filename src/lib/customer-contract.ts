@@ -9,7 +9,6 @@ export type VisaStatus =
   | 'ready_for_collection'
   | 'closed'
   | 'cancelled'
-export type InquiryStatus = 'new' | 'contacted' | 'in_progress' | 'closed'
 export type AccountStatus = 'pending_verification' | 'active' | 'suspended'
 export type AppLanguage = 'ar' | 'en'
 
@@ -31,13 +30,6 @@ const visaStatusLabels: Record<VisaStatus, Copy> = {
   ready_for_collection: { ar: 'جاهز للمتابعة', en: 'Ready for follow-up' },
   closed: { ar: 'مغلق', en: 'Closed' },
   cancelled: { ar: 'ملغى', en: 'Cancelled' },
-}
-
-const inquiryStatusLabels: Record<InquiryStatus, Copy> = {
-  new: { ar: 'جديد', en: 'New' },
-  contacted: { ar: 'تم التواصل', en: 'Contacted' },
-  in_progress: { ar: 'قيد المتابعة', en: 'In progress' },
-  closed: { ar: 'مغلق', en: 'Closed' },
 }
 
 const accountStatusLabels: Record<AccountStatus, Copy> = {
@@ -83,8 +75,11 @@ export function customerSignUpPayload(
 }
 
 export function travelersCount(adults: number, children: number) {
-  const total = Math.trunc(adults) + Math.trunc(children)
-  if (!Number.isInteger(total) || total < 1 || total > 100) {
+  if (!Number.isInteger(adults) || !Number.isInteger(children) || adults < 0 || children < 0) {
+    throw new Error('travelers')
+  }
+  const total = adults + children
+  if (total < 1 || total > 100) {
     throw new Error('travelers')
   }
   return total
@@ -92,7 +87,8 @@ export function travelersCount(adults: number, children: number) {
 
 export function customerNote(note: string, children: number) {
   const trimmed = note.trim()
-  const prefix = children > 0 ? `عدد الأطفال: ${Math.trunc(children)}` : ''
+  const safeChildren = Number.isFinite(children) ? Math.max(0, Math.trunc(children)) : 0
+  const prefix = safeChildren > 0 ? `عدد الأطفال: ${safeChildren}` : ''
   return [prefix, trimmed].filter(Boolean).join('\n').slice(0, 1000)
 }
 
@@ -134,22 +130,32 @@ export function asNumber(value: unknown) {
   return 0
 }
 
-export function formatMoney(value: number, _language?: AppLanguage) {
-  const amount = new Intl.NumberFormat('en-GB', {
+export function formatMoney(value: number, language: AppLanguage = 'en') {
+  const amount = new Intl.NumberFormat(language === 'ar' ? 'ar-SA' : 'en-GB', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value)
   return `${amount} SAR`
 }
 
-export function formatDate(value: string | null | undefined, _language?: AppLanguage) {
+export function formatDate(value: string | null | undefined, language: AppLanguage = 'en') {
   if (!value) return '—'
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   const date = dateOnly
     ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
     : new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(date)
+  return new Intl.DateTimeFormat(language === 'ar' ? 'ar-SA' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(date)
+}
+
+export function formatDateTime(value: string | null | undefined, language: AppLanguage = 'en') {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat(language === 'ar' ? 'ar-SA' : 'en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
 }
 
 function label<T extends string>(labels: Record<T, Copy>, value: string, language: AppLanguage) {
@@ -163,10 +169,6 @@ export function bookingStatusLabel(value: string, language: AppLanguage) {
 
 export function visaStatusLabel(value: string, language: AppLanguage) {
   return label(visaStatusLabels, value, language)
-}
-
-export function inquiryStatusLabel(value: string, language: AppLanguage) {
-  return label(inquiryStatusLabels, value, language)
 }
 
 export function accountStatusLabel(value: string, language: AppLanguage) {
@@ -208,9 +210,9 @@ export function errorText(error: unknown, language: AppLanguage = 'ar') {
   if (/invalid login credentials/i.test(message)) return errorCopy.credentials[language]
   if (/email not confirmed/i.test(message)) return errorCopy.confirmEmail[language]
   if (/user already registered|already been registered/i.test(message)) return errorCopy.registered[language]
-  if (/account cannot/i.test(message)) return errorCopy.inactive[language]
+  if (/account cannot|account is not active|inactive account|account is inactive|account is suspended/i.test(message)) return errorCopy.inactive[language]
   if (/package is not available|program is not available/i.test(message)) return errorCopy.package[language]
-  if (/not authorized|permission denied|42501/i.test(message)) return errorCopy.forbidden[language]
+  if (/not authorized|not allowed|permission denied|access denied|42501/i.test(message)) return errorCopy.forbidden[language]
   if (/password/i.test(message) && /weak|short|at least/i.test(message)) return errorCopy.weakPassword[language]
   if (/rate limit|too many requests|over_request_rate_limit/i.test(message)) return errorCopy.rate[language]
   if (/not configured|supabase is not configured/i.test(message)) return errorCopy.config[language]

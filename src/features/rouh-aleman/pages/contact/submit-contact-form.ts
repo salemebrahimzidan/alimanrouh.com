@@ -1,30 +1,43 @@
-const WEB3FORMS_SUBMIT_URL = 'https://api.web3forms.com/submit'
-const WEB3FORMS_SUBJECT = 'New inquiry from Al Iman Rouh website'
-const WEB3FORMS_FROM_NAME = 'Al Iman Rouh Website'
+import { createGuestSupportConversation, createOwnSupportConversation, type SupportTopic } from '../../../../lib/customer-data'
+import { requireDb } from '../../../../lib/supabase'
 
-type Web3FormsResponse = {
-  success: boolean
-  message?: string
+const subjectByTopic: Record<SupportTopic, string> = {
+  general: 'استفسار عام',
+  contact: 'تواصل من الموقع',
+  hajj: 'استفسار الحج',
+  umrah: 'استفسار العمرة',
+  booking: 'استفسار حجز',
+  complaint: 'شكوى',
 }
 
-export async function submitContactForm(formData: FormData): Promise<void> {
-  const accessKey = import.meta.env.VITE_WEB3FORMS_ACCESS_KEY?.trim()
-  if (!accessKey) {
-    throw new Error('VITE_WEB3FORMS_ACCESS_KEY is not configured. Add it to .env (or Vercel) and rebuild.')
+export async function submitContactForm(
+  formData: FormData,
+  options: { topic: SupportTopic; context: string | null },
+): Promise<{ conversationId: string; guest: boolean }> {
+  const name = String(formData.get('name') ?? '').trim()
+  const email = String(formData.get('email') ?? '').trim()
+  const phone = String(formData.get('phone') ?? '').trim()
+  const body = String(formData.get('message') ?? '').trim()
+  const subject = subjectByTopic[options.topic]
+  const { data, error } = await requireDb().auth.getUser()
+  if (error) throw error
+  if (data.user) {
+    const conversationId = await createOwnSupportConversation({
+      subject,
+      body,
+      topic: options.topic,
+      context: options.context,
+    })
+    return { conversationId, guest: false }
   }
-
-  formData.append('access_key', accessKey)
-  formData.append('subject', WEB3FORMS_SUBJECT)
-  formData.append('from_name', WEB3FORMS_FROM_NAME)
-
-  const response = await fetch(WEB3FORMS_SUBMIT_URL, {
-    method: 'POST',
-    headers: { Accept: 'application/json' },
-    body: formData,
+  const conversationId = await createGuestSupportConversation({
+    name,
+    email,
+    phone,
+    subject,
+    body,
+    topic: options.topic,
+    context: options.context,
   })
-
-  const data = (await response.json()) as Web3FormsResponse
-  if (!response.ok || !data.success) {
-    throw new Error(data.message || `Web3Forms request failed (${response.status}).`)
-  }
+  return { conversationId, guest: true }
 }

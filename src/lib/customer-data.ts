@@ -61,14 +61,32 @@ export type OwnDocument = {
   created_at: string
 }
 
-export type OwnInquiry = {
+export type SupportTopic = 'general' | 'contact' | 'hajj' | 'umrah' | 'booking' | 'complaint'
+
+export type OwnSupportConversation = {
   id: string
-  program_id: string | null
-  program_title: string | null
-  message: string
-  travelers_count: number
-  internal_status: string
+  subject: string
+  topic: SupportTopic
+  context: string | null
+  status: 'new' | 'in_progress' | 'resolved'
+  last_message: string
+  last_message_at: string
+  last_message_sender: 'customer' | 'admin'
+  customer_unread_count: number
   created_at: string
+}
+
+export type OwnSupportMessage = {
+  id: string
+  conversation_id: string
+  sender: 'customer' | 'admin'
+  body: string
+  read_at: string | null
+  created_at: string
+}
+
+export type GuestSupportConversation = OwnSupportConversation & {
+  messages: OwnSupportMessage[]
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -353,39 +371,168 @@ export async function openOwnDocument(path: string) {
   return data.signedUrl
 }
 
-export async function createHajjInquiry(input: {
-  userId: string
-  programId: string | null
-  travelers: number
-  message: string
+export async function createOwnSupportConversation(input: {
+  subject: string
+  body: string
+  topic: SupportTopic
+  context: string | null
 }) {
-  const { error } = await requireDb().from('hajj_inquiries').insert({
-    customer_id: input.userId,
-    program_id: input.programId,
-    travelers_count: input.travelers,
-    message: input.message.trim(),
-    internal_status: 'new',
+  const { data, error } = await requireDb().rpc('support_create_registered_conversation', {
+    p_subject: input.subject,
+    p_body: input.body.trim(),
+    p_topic: input.topic,
+    p_context: input.context,
   })
   if (error) throw error
+  return text(data)
 }
 
-export async function listOwnInquiries(userId: string) {
+export async function listOwnSupportConversations(): Promise<OwnSupportConversation[]> {
   const { data, error } = await requireDb()
-    .from('hajj_inquiry_rows')
-    .select('id, customer_id, program_id, message, travelers_count, internal_status, created_at, program_title')
-    .eq('customer_id', userId)
-    .order('created_at', { ascending: false })
+    .from('support_conversations')
+    .select('id, subject, topic, context, status, last_message, last_message_at, last_message_sender, customer_unread_count, created_at')
+    .order('last_message_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((item) => mapSupportConversation(item))
+}
+
+function mapSupportConversation(value: unknown): OwnSupportConversation {
+  const row = asRecord(value)
+  return {
+    id: text(row.id),
+    subject: text(row.subject),
+    topic: text(row.topic) as SupportTopic,
+    context: row.context == null ? null : text(row.context),
+    status: text(row.status) as OwnSupportConversation['status'],
+    last_message: text(row.last_message),
+    last_message_at: text(row.last_message_at),
+    last_message_sender: text(row.last_message_sender) as OwnSupportConversation['last_message_sender'],
+    customer_unread_count: numberValue(row.customer_unread_count),
+    created_at: text(row.created_at),
+  }
+}
+
+export async function listOwnSupportMessages(conversationId: string): Promise<OwnSupportMessage[]> {
+  const { data, error } = await requireDb()
+    .from('support_messages')
+    .select('id, conversation_id, sender, body, read_at, created_at')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
   if (error) throw error
   return (data ?? []).map((item) => {
     const row = asRecord(item)
     return {
       id: text(row.id),
-      program_id: row.program_id == null ? null : text(row.program_id),
-      program_title: row.program_title == null ? null : text(row.program_title),
-      message: text(row.message),
-      travelers_count: numberValue(row.travelers_count),
-      internal_status: text(row.internal_status),
+      conversation_id: text(row.conversation_id),
+      sender: text(row.sender) as OwnSupportMessage['sender'],
+      body: text(row.body),
+      read_at: row.read_at == null ? null : text(row.read_at),
       created_at: text(row.created_at),
-    } satisfies OwnInquiry
+    }
+  })
+}
+
+export async function sendOwnSupportReply(conversationId: string, body: string) {
+  const db = requireDb()
+  const { data, error: authError } = await db.auth.getUser()
+  if (authError) throw authError
+  if (!data.user) throw new Error('customer session required')
+  const { error } = await db.from('support_messages').insert({
+    conversation_id: conversationId,
+    sender: 'customer',
+    author_user_id: data.user.id,
+    body: body.trim(),
+  })
+  if (error) throw error
+}
+
+export async function markOwnSupportRead(conversationId: string) {
+  const { error } = await requireDb().rpc('support_mark_read', { p_conversation_id: conversationId })
+  if (error) throw error
+}
+
+const guestTokenStorageKey = (conversationId: string) => `alimanrouh.support.guest.${conversationId}`
+
+async function callGuestSupportGateway(operation: 'create' | 'get' | 'reply', body: Record<string, unknown>): Promise<unknown> {
+  const response = await fetch('/api/support/guest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ operation, ...body }),
+  })
+  const result: unknown = await response.json()
+  if (!response.ok) {
+    const message = asRecord(result).message
+    throw new Error(typeof message === 'string' ? message : 'guest support request failed')
+  }
+  return result
+}
+
+export function getGuestSupportToken(conversationId: string) {
+  return sessionStorage.getItem(guestTokenStorageKey(conversationId)) ?? ''
+}
+
+export function setGuestSupportToken(conversationId: string, token: string) {
+  const value = token.trim()
+  if (!/^[a-f0-9]{64}$/i.test(value)) throw new Error('enter a valid guest access token')
+  sessionStorage.setItem(guestTokenStorageKey(conversationId), value.toLowerCase())
+}
+
+export async function createGuestSupportConversation(input: {
+  name: string
+  email: string
+  phone: string
+  subject: string
+  body: string
+  topic: SupportTopic
+  context: string | null
+}) {
+  const result = asRecord(await callGuestSupportGateway('create', {
+    name: input.name.trim(),
+    email: input.email.trim(),
+    phone: input.phone.trim(),
+    subject: input.subject,
+    body: input.body.trim(),
+    topic: input.topic,
+    context: input.context,
+  }))
+  const conversationId = text(result.conversation_id)
+  const accessToken = text(result.access_token)
+  if (!conversationId || !/^[a-f0-9]{64}$/i.test(accessToken)) {
+    throw new Error('guest support service returned an invalid access credential')
+  }
+  setGuestSupportToken(conversationId, accessToken)
+  return conversationId
+}
+
+export async function getGuestSupportConversation(conversationId: string): Promise<GuestSupportConversation> {
+  const token = sessionStorage.getItem(guestTokenStorageKey(conversationId))
+  if (!token) throw new Error('guest conversation access is not available in this browser session')
+  const data = await callGuestSupportGateway('get', {
+    conversation_id: conversationId,
+    access_token: token,
+  })
+  const row = asRecord(data)
+  const conversation = mapSupportConversation(row)
+  const messages = Array.isArray(row.messages) ? row.messages.map((value) => {
+    const message = asRecord(value)
+    return {
+      id: text(message.id),
+      conversation_id: conversationId,
+      sender: text(message.sender) as OwnSupportMessage['sender'],
+      body: text(message.body),
+      read_at: null,
+      created_at: text(message.created_at),
+    } satisfies OwnSupportMessage
+  }) : []
+  return { ...conversation, messages }
+}
+
+export async function sendGuestSupportReply(conversationId: string, body: string) {
+  const token = sessionStorage.getItem(guestTokenStorageKey(conversationId))
+  if (!token) throw new Error('guest conversation access is not available in this browser session')
+  await callGuestSupportGateway('reply', {
+    conversation_id: conversationId,
+    access_token: token,
+    body: body.trim(),
   })
 }

@@ -4,7 +4,6 @@ import {
   FileText,
   LogOut,
   Mail,
-  MessageSquareText,
   Phone,
   Stamp,
   UserRound,
@@ -22,7 +21,6 @@ const links = [
   { to: '/account/bookings', key: 'nav.bookings', icon: CalendarDays },
   { to: '/account/visas', key: 'nav.visas', icon: Stamp },
   { to: '/account/documents', key: 'nav.documents', icon: FileText },
-  { to: '/account/inquiries', key: 'nav.inquiries', icon: MessageSquareText },
 ] as const
 
 type Props = {

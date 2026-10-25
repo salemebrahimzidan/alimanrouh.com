@@ -17,6 +17,15 @@
     "name": "Full name",
     "phone": "Phone",
     "email": "Email",
+    "topic": "Message type",
+    "topics": {
+      "contact": "General contact",
+      "general": "Website inquiry",
+      "hajj": "Hajj",
+      "umrah": "Umrah",
+      "booking": "Existing booking or booking question",
+      "complaint": "Complaint"
+    },
     "message": "Message",
     "action": "Send message",
     "sending": "Sending...",
@@ -32,6 +41,7 @@
       "phone": "Please enter a valid phone number with country code.",
       "email": "Please enter a valid email address.",
       "message": "Please write a message (at least 10 characters).",
+      "messageTooLong": "The message must be 5,000 characters or fewer.",
       "submitFailed": "Failed to send message. Please try again."
     }
   },

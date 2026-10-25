@@ -232,7 +232,7 @@ export function HajjPage() {
                       {pkg.price == null ? t('packages.priceOnRequest') : `${t('packages.currency')} ${pkg.price.toLocaleString()}`}
                     </div>
                     <Link
-                      to={`/account/inquiries?program=${pkg.id}`}
+                      to={`/contact?topic=hajj&context=${encodeURIComponent(pkg.id)}`}
                       className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-(--ra-green) px-4 py-2 text-xs font-semibold text-white transition hover:bg-(--ra-green-2)"
                     >
                       {t('packages.inquire')}
@@ -252,7 +252,7 @@ export function HajjPage() {
         <h2 className="mt-2 text-2xl font-bold text-(--ra-green)">{t('inquiry.title')}</h2>
         <p className="mt-3 text-sm leading-relaxed text-(--ra-muted)">{t('inquiry.disclaimer')}</p>
         <Link
-          to="/account/inquiries"
+          to="/contact?topic=hajj"
           className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-(--ra-green) px-6 py-3 text-sm font-semibold text-white"
         >
           {t('inquiry.action')}

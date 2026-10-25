@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { BadgeCheck, Banknote, CalendarDays, Check, ChevronRight, ClipboardList, Clock, CreditCard, Landmark, MessageSquareText, Search, Send, Users, Wallet, X, type LucideIcon } from 'lucide-react'
+import { BadgeCheck, Banknote, CalendarDays, Check, ChevronDown, ChevronRight, ClipboardList, Clock, CreditCard, Landmark, MessageSquareText, Search, Send, Users, Wallet, X, type LucideIcon } from 'lucide-react'
 import { Link, Navigate, Outlet, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../auth/auth-context'
@@ -9,15 +9,15 @@ import {
   bookingStatusLabel,
   errorText,
   formatDate,
+  formatDateTime,
   formatMoney,
-  inquiryStatusLabel,
   isMobile,
   safeNextPath,
   visaStatusLabel,
   type AppLanguage,
 } from '../../../../lib/customer-contract'
 import {
-  createHajjInquiry,
+  createOwnSupportConversation,
   createVisa,
   getOwnBooking,
   getOwnProfile,
@@ -25,22 +25,28 @@ import {
   listBookingHistory,
   listOwnBookings,
   listOwnDocuments,
-  listOwnInquiries,
+  listOwnSupportConversations,
+  listOwnSupportMessages,
   listOwnPayments,
   listOwnVisas,
   openOwnDocument,
+  markOwnSupportRead,
   removeOwnDocument,
+  sendOwnSupportReply,
   uploadCustomerDocument,
   type OwnBooking,
   type OwnDocument,
-  type OwnInquiry,
+  type OwnSupportConversation,
+  type OwnSupportMessage,
   type OwnPayment,
   type OwnProfile,
   type OwnVisa,
   type StatusEvent,
 } from '../../../../lib/customer-data'
+import { requireDb } from '../../../../lib/supabase'
 const fieldClass =
   'w-full rounded-xl border border-(--ra-border) bg-white px-4 py-3 text-sm text-(--ra-black) outline-none transition focus:border-(--ra-green)/35 focus:ring-2 focus:ring-(--ra-ring)'
+const selectFieldClass = `${fieldClass} cursor-pointer appearance-none pe-10`
 
 function langOf(language: string): AppLanguage {
   return language === 'ar' ? 'ar' : 'en'
@@ -486,16 +492,34 @@ export function InquiriesPage() {
   const { userId, profile } = useProfile()
   const [params] = useSearchParams()
   const programId = params.get('program') ?? ''
-  const [rows, setRows] = useState<OwnInquiry[]>([])
+  const [rows, setRows] = useState<OwnSupportConversation[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(params.get('conversation'))
+  const [messages, setMessages] = useState<OwnSupportMessage[]>([])
+  const [messagesConversationId, setMessagesConversationId] = useState<string | null>(null)
+  const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [pending, setPending] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches)
+  const selected = rows.find((row) => row.id === selectedId) ?? null
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const media = window.matchMedia('(max-width: 1023px)')
+    const update = () => setIsMobile(media.matches)
+    update()
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', update)
+      return () => media.removeEventListener('change', update)
+    }
+    media.addListener(update)
+    return () => media.removeListener(update)
+  }, [])
 
   useEffect(() => {
     if (!userId) return
     let active = true
-    listOwnInquiries(userId)
+    const refresh = () => listOwnSupportConversations()
       .then((inquiries) => {
         if (!active) return
         setRows(inquiries)
@@ -506,10 +530,47 @@ export function InquiriesPage() {
       .finally(() => {
         if (active) setLoading(false)
       })
+    void refresh()
+    const channel = requireDb().channel(`customer-support-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_conversations', filter: `customer_id=eq.${userId}` }, () => {
+        void refresh()
+        if (selectedId) void listOwnSupportMessages(selectedId).then((items) => {
+          setMessages(items)
+          setMessagesConversationId(selectedId)
+        }).catch((err) => setError(errorText(err, language)))
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_messages' }, () => {
+        void refresh()
+        if (selectedId) void listOwnSupportMessages(selectedId).then((items) => {
+          setMessages(items)
+          setMessagesConversationId(selectedId)
+        }).catch((err) => setError(errorText(err, language)))
+      })
+      .subscribe()
+    return () => {
+      active = false
+      void requireDb().removeChannel(channel)
+    }
+  }, [userId, language, selectedId])
+
+  useEffect(() => {
+    if (!selectedId) return
+    let active = true
+    markOwnSupportRead(selectedId)
+      .then(() => listOwnSupportMessages(selectedId))
+      .then((items) => {
+        if (active) {
+          setMessages(items)
+          setMessagesConversationId(selectedId)
+        }
+      })
+      .catch((err) => {
+        if (active) setError(errorText(err, language))
+      })
     return () => {
       active = false
     }
-  }, [userId, language])
+  }, [selectedId, language])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -520,27 +581,51 @@ export function InquiriesPage() {
     }
     const form = new FormData(formElement)
     const message = String(form.get('message') ?? '').trim()
-    if (message.length < 2 || message.length > 2000) {
+    const topic = (String(form.get('topic') ?? 'general') || 'general') as 'general' | 'hajj' | 'umrah' | 'booking' | 'complaint'
+    if (message.length < 5 || message.length > 5000) {
       setError(t('inquiries.invalid'))
       return
     }
     setPending(true)
     setError('')
-    setNotice('')
     try {
-      await createHajjInquiry({ userId, programId: programId || null, travelers: 1, message })
+      const subjectLabels = {
+        general: language === 'ar' ? 'استفسار عام' : 'General inquiry',
+        hajj: language === 'ar' ? 'استفسار الحج' : 'Hajj inquiry',
+        umrah: language === 'ar' ? 'استفسار العمرة' : 'Umrah inquiry',
+        booking: language === 'ar' ? 'استفسار حجز' : 'Booking question',
+        complaint: language === 'ar' ? 'شكوى' : 'Complaint',
+      }
+      const id = await createOwnSupportConversation({
+        subject: subjectLabels[topic],
+        body: message,
+        topic,
+        context: programId ? `hajj_program_id=${programId}` : null,
+      })
+      formElement.reset()
+      setSelectedId(id)
+      setRows(await listOwnSupportConversations())
     } catch (err) {
       setError(errorText(err, language))
       setPending(false)
       return
     }
+    setPending(false)
+  }
 
-    setNotice(t('sent'))
-    formElement.reset()
+  async function reply(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selected || !draft.trim() || !userId || pending) return
+    setPending(true)
+    setError('')
     try {
-      setRows(await listOwnInquiries(userId))
-    } catch {
-      setError(t('inquiries.refreshError'))
+      await sendOwnSupportReply(selected.id, draft)
+      setDraft('')
+      setMessages(await listOwnSupportMessages(selected.id))
+      setMessagesConversationId(selected.id)
+      setRows(await listOwnSupportConversations())
+    } catch (err) {
+      setError(errorText(err, language))
     } finally {
       setPending(false)
     }
@@ -548,7 +633,7 @@ export function InquiriesPage() {
 
   return (
     <section className="space-y-6">
-      <PageTitle title={t('inquiries.title')} />
+      <PageTitle title={t('inquiries.title')} subtitle={t('inquiries.subtitle')} />
       <form onSubmit={submit} className="overflow-hidden rounded-2xl border border-(--ra-border) bg-white shadow-sm">
         <div className="flex items-start gap-3 border-b border-(--ra-border) bg-(--ra-bg) px-5 py-5 sm:px-6">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-(--ra-green) shadow-sm ring-1 ring-(--ra-border)">
@@ -561,19 +646,31 @@ export function InquiriesPage() {
         </div>
         <div className="grid gap-5 p-5 sm:p-6">
           <label className="grid gap-2">
+            <span className="text-sm font-semibold text-(--ra-black)">{language === 'ar' ? 'نوع الاستفسار' : 'Inquiry type'}</span>
+            <span className="relative block">
+              <select name="topic" defaultValue={programId ? 'hajj' : 'general'} className={selectFieldClass}>
+                <option value="general">{language === 'ar' ? 'استفسار عام عن الموقع' : 'General website inquiry'}</option>
+                <option value="hajj">{language === 'ar' ? 'الحج' : 'Hajj'}</option>
+                <option value="umrah">{language === 'ar' ? 'العمرة' : 'Umrah'}</option>
+                <option value="booking">{language === 'ar' ? 'حجز قائم أو استفسار حجز' : 'Existing booking or booking question'}</option>
+                <option value="complaint">{language === 'ar' ? 'شكوى' : 'Complaint'}</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute inset-y-0 end-3.5 my-auto h-4 w-4 text-(--ra-muted)" aria-hidden="true" />
+            </span>
+          </label>
+          <label className="grid gap-2">
             <span className="text-sm font-semibold text-(--ra-black)">{t('fields.message')}</span>
             <textarea
               name="message"
               rows={6}
-              maxLength={2000}
+              maxLength={5000}
               placeholder={t('inquiries.messagePlaceholder')}
               className={`${fieldClass} min-h-36 resize-y leading-relaxed`}
               required
             />
-            <span className="text-xs text-(--ra-muted)">{t('inquiries.messageHint')}</span>
+            <span className="text-xs text-(--ra-muted)">{language === 'ar' ? 'اكتب رسالتك بوضوح (حتى 5000 حرف).' : 'Please provide a clear message (up to 5,000 characters).'}</span>
           </label>
           {error ? <Alert message={error} /> : null}
-          {notice ? <Success message={notice} /> : null}
           <div className="flex justify-start border-t border-(--ra-border) pt-5">
             <button
               type="submit"
@@ -587,17 +684,188 @@ export function InquiriesPage() {
         </div>
       </form>
       {loading ? <Loading label={t('loading')} /> : rows.length === 0 ? <p className="text-sm text-(--ra-muted)">{t('inquiries.empty')}</p> : (
-        <ul className="grid gap-3">
-          {rows.map((row) => (
-            <li key={row.id} className="rounded-2xl border border-(--ra-border) bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold text-(--ra-green)">{row.program_title || t('inquiries.general')}</span>
-                <StatusText>{inquiryStatusLabel(row.internal_status, language)}</StatusText>
+        <div className="grid gap-4 lg:grid-cols-[minmax(17rem,0.8fr)_minmax(0,1.2fr)]">
+          <aside className={`${isMobile && selected ? 'hidden' : 'block'} overflow-hidden rounded-[28px] border border-[#e9edf3] bg-[#f7f8fb] shadow-[0_12px_32px_rgba(15,23,42,0.06)] lg:block`}>
+            <div className="flex items-center justify-between border-b border-[#edf1f5] bg-white/80 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#25D366] text-sm font-bold text-white shadow-sm">WA</span>
+                <h3 className="text-sm font-bold tracking-[0.12em] text-(--ra-muted) uppercase">Inbox</h3>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-(--ra-muted)">{row.message}</p>
-            </li>
-          ))}
-        </ul>
+              <span className="rounded-full bg-[#eaf7ee] px-2 py-0.5 text-[10px] font-bold text-(--ra-green)">{rows.length}</span>
+            </div>
+            <ul className="grid content-start gap-2 p-2">
+              {rows.map((row, index) => {
+                const isSelected = selectedId === row.id
+                const statusLabel = row.status === 'resolved'
+                  ? (language === 'ar' ? 'تم الحل' : 'Resolved')
+                  : row.status === 'in_progress'
+                    ? (language === 'ar' ? 'قيد المتابعة' : 'In progress')
+                    : (language === 'ar' ? 'جديد' : 'New')
+                const chatNumber = String(index + 1).padStart(2, '0')
+
+                return (
+                  <li key={row.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(row.id)}
+                      className={[
+                        'w-full rounded-[22px] border p-3 text-start transition-all duration-200',
+                        isSelected
+                          ? 'border-[#d3e9dc] bg-[#effaf3] shadow-[0_8px_24px_rgba(31,95,68,0.08)] ring-1 ring-[#d7f1df]'
+                          : 'border-transparent bg-white/70 hover:border-[#d9e7dd] hover:bg-white',
+                      ].join(' ')}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <span className="mt-0.5 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-(--ra-green) px-2 text-[10px] font-bold text-white shadow-sm">
+                          #{chatNumber}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="truncate text-sm font-bold text-(--ra-green)">{row.subject}</p>
+                            {row.customer_unread_count > 0 ? (
+                              <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-(--ra-gold) px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {row.customer_unread_count}
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 truncate text-sm text-(--ra-muted)">{row.last_message || 'No message yet'}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className="rounded-full bg-[#f5f7fa] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--ra-muted) ring-1 ring-[#edf1f5]">{statusLabel}</span>
+                        <time className="text-[11px] text-(--ra-muted)" dir="ltr">{formatDateTime(row.last_message_at, language)}</time>
+                      </div>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </aside>
+
+          {isMobile ? (
+            selected ? (
+              <div className="fixed inset-0 z-50 bg-[#0b0f14]/35 p-3 sm:p-5">
+                <div className="mx-auto flex h-full max-w-md flex-col overflow-hidden rounded-[28px] border border-[#e9edf3] bg-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
+                  <div className="flex items-center justify-between gap-3 border-b border-[#edf1f5] bg-[linear-gradient(180deg,#f5faf7_0%,#ffffff_100%)] px-4 py-3.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(null)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-(--ra-green) shadow-sm ring-1 ring-[#e5ece7] transition hover:bg-[#f1f7f3]"
+                      aria-label={language === 'ar' ? 'عودة' : 'Back'}
+                    >
+                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-(--ra-green) text-sm font-bold text-white shadow-sm">S</span>
+                      <div className="min-w-0 flex-1">
+                        <h2 className="truncate text-sm font-bold text-(--ra-green)">{selected.subject}</h2>
+                        <p className="mt-0.5 flex items-center gap-2 text-[10px] text-(--ra-muted)">
+                          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                          {selected.status === 'resolved'
+                            ? language === 'ar' ? 'تم الحل' : 'Resolved'
+                            : selected.status === 'in_progress'
+                              ? language === 'ar' ? 'قيد المتابعة' : 'In progress'
+                              : language === 'ar' ? 'جديد' : 'New'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(null)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-(--ra-black) shadow-sm ring-1 ring-[#edf1f5] transition hover:bg-[#f7f8fb]"
+                      aria-label={language === 'ar' ? 'إغلاق المحادثة' : 'Close conversation'}
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                  <div className="flex-1 space-y-3 overflow-y-auto bg-[radial-gradient(circle_at_top,#f9f7f3_0%,#f4f6fb_100%)] p-4">
+                    {(messagesConversationId === selected.id ? messages : []).map((item) => (
+                      <article key={item.id} className={`max-w-[87%] rounded-2xl p-3 ${item.sender === 'admin' ? 'ms-auto bg-[#1f2d2d] text-white shadow-sm' : 'me-auto border border-[#edf1f5] bg-white text-(--ra-black)'}`}>
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] opacity-80">
+                          {item.sender === 'admin' ? (language === 'ar' ? 'الدعم' : 'Support') : (language === 'ar' ? 'أنت' : 'You')}
+                        </p>
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed">{item.body}</p>
+                        <time className="mt-2 block text-[10px] opacity-70" dir="ltr">{formatDateTime(item.created_at, language)}</time>
+                      </article>
+                    ))}
+                  </div>
+                  <form onSubmit={reply} className="border-t border-[#edf1f5] bg-white p-3">
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        value={draft}
+                        onChange={(event) => setDraft(event.target.value)}
+                        maxLength={5000}
+                        rows={2}
+                        placeholder={language === 'ar' ? 'اكتب ردك...' : 'Write a reply...'}
+                        className={`${fieldClass} min-w-0 resize-y rounded-2xl border border-[#edf1f5] bg-[#f9fafb] px-4 py-3 text-sm text-(--ra-black) shadow-inner outline-none transition focus:border-(--ra-green)/35 focus:ring-2 focus:ring-(--ra-ring)`}
+                      />
+                      <button
+                        type="submit"
+                        disabled={pending || !draft.trim()}
+                        className="inline-flex h-11 shrink-0 items-center justify-center rounded-2xl bg-(--ra-green) px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-(--ra-green)/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {language === 'ar' ? 'إرسال' : 'Send'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            ) : null
+          ) : selected ? (
+            <div className="overflow-hidden rounded-[28px] border border-[#e9edf3] bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
+              <div className="flex items-center justify-between gap-3 border-b border-[#edf1f5] bg-[linear-gradient(180deg,#f5faf7_0%,#ffffff_100%)] px-4 py-3.5 sm:px-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-(--ra-green) text-sm font-bold text-white shadow-sm">S</span>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-bold text-(--ra-green)">{selected.subject}</h2>
+                    <p className="mt-0.5 flex items-center gap-2 text-[11px] text-(--ra-muted)">
+                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+                      {selected.status === 'resolved'
+                        ? language === 'ar' ? 'تم الحل' : 'Resolved'
+                        : selected.status === 'in_progress'
+                          ? language === 'ar' ? 'قيد المتابعة' : 'In progress'
+                          : language === 'ar' ? 'جديد' : 'New'}
+                      {selected.context ? ` · ${selected.context}` : ''}
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full border border-[#d7f1df] bg-[#effaf3] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--ra-green)">
+                  {selected.status === 'resolved' ? (language === 'ar' ? 'حل' : 'Solved') : (language === 'ar' ? 'مفتوح' : 'Open')}
+                </span>
+              </div>
+              <div className="max-h-[28rem] space-y-3 overflow-y-auto bg-[radial-gradient(circle_at_top,#f9f7f3_0%,#f4f6fb_100%)] p-4">
+                {(messagesConversationId === selected.id ? messages : []).map((item) => (
+                  <article key={item.id} className={`max-w-[87%] rounded-2xl p-3 ${item.sender === 'admin' ? 'ms-auto bg-[#1f2d2d] text-white shadow-sm' : 'me-auto border border-[#edf1f5] bg-white text-(--ra-black)'}`}>
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.08em] opacity-80">
+                      {item.sender === 'admin' ? (language === 'ar' ? 'الدعم' : 'Support') : (language === 'ar' ? 'أنت' : 'You')}
+                    </p>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{item.body}</p>
+                    <time className="mt-2 block text-[10px] opacity-70" dir="ltr">{formatDateTime(item.created_at, language)}</time>
+                  </article>
+                ))}
+              </div>
+              <form onSubmit={reply} className="border-t border-[#edf1f5] bg-white p-3">
+                <div className="flex items-end gap-2">
+                  <textarea
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    maxLength={5000}
+                    rows={2}
+                    placeholder={language === 'ar' ? 'اكتب ردك...' : 'Write a reply...'}
+                    className={`${fieldClass} min-w-0 resize-y rounded-2xl border border-[#edf1f5] bg-[#f9fafb] px-4 py-3 text-sm text-(--ra-black) shadow-inner outline-none transition focus:border-(--ra-green)/35 focus:ring-2 focus:ring-(--ra-ring)`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={pending || !draft.trim()}
+                    className="inline-flex h-11 shrink-0 items-center justify-center rounded-2xl bg-(--ra-green) px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-(--ra-green)/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {language === 'ar' ? 'إرسال' : 'Send'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : <p className="rounded-[28px] border border-[#e9edf3] bg-white p-5 text-sm text-(--ra-muted) shadow-[0_12px_32px_rgba(15,23,42,0.06)] lg:col-start-2">{language === 'ar' ? 'اختر محادثة لعرض الرسائل والرد.' : 'Select a conversation to view and reply.'}</p>}
+        </div>
       )}
     </section>
   )

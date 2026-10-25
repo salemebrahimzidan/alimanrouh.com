@@ -108,6 +108,13 @@ export function UmrahPage() {
                   <MessageCircle className="h-4 w-4" aria-hidden="true" />
                   {t('hero.whatsappCta')}
                 </a>
+                <Link
+                  to="/contact?topic=umrah"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/30 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden="true" />
+                  {t('hero.inquiryCta')}
+                </Link>
               </div>
             </div>
           </div>
@@ -188,18 +195,26 @@ export function UmrahPage() {
                       <CalendarDays className="h-3.5 w-3.5 text-(--ra-green)" aria-hidden="true" />
                       {pkg.duration ? t('packages.days', { count: pkg.duration }) : t('packages.flexible')}
                     </div>
-                    <div className="mt-auto flex items-end justify-between gap-3 border-t border-(--ra-border)/80 pt-4">
+                    <div className="mt-auto flex flex-wrap items-end justify-between gap-2 border-t border-(--ra-border)/80 pt-4">
                       <div className="text-lg font-bold tabular-nums text-(--ra-gold)">
                         {t('packages.currency')} {(pkg.price ?? 0).toLocaleString()}
                       </div>
-                      <Link
-                        to={`/booking?package=${pkg.id}`}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-(--ra-green) px-4 py-2 text-xs font-semibold text-white transition hover:bg-(--ra-green-2)"
-                      >
-                        {t('packages.book')}
-                        <ArrowRight className="h-3.5 w-3.5 rtl:hidden" aria-hidden="true" />
-                        <ArrowLeft className="hidden h-3.5 w-3.5 rtl:inline" aria-hidden="true" />
-                      </Link>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          to={`/contact?topic=umrah&context=${encodeURIComponent(pkg.id)}`}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-(--ra-green) px-3 py-2 text-xs font-semibold text-(--ra-green)"
+                        >
+                          {t('packages.inquire')}
+                        </Link>
+                        <Link
+                          to={`/booking?package=${pkg.id}`}
+                          className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-(--ra-green) px-4 py-2 text-xs font-semibold text-white transition hover:bg-(--ra-green-2)"
+                        >
+                          {t('packages.book')}
+                          <ArrowRight className="h-3.5 w-3.5 rtl:hidden" aria-hidden="true" />
+                          <ArrowLeft className="hidden h-3.5 w-3.5 rtl:inline" aria-hidden="true" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </article>
