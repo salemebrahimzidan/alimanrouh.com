@@ -1,15 +1,11 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { BadgeCheck, Banknote, CalendarDays, Check, ChevronRight, ClipboardList, Clock, CreditCard, Landmark, MessageSquareText, Search, Send, Users, Wallet, X, type LucideIcon } from 'lucide-react'
+import { Link, Navigate, Outlet, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import type { Country } from 'react-phone-number-input'
 import { useAuth } from '../../auth/auth-context'
 import { ConfigNotice, Loading } from '../../auth/auth-pages'
-import { useLanguage } from '../../shared/hooks/useLanguage'
-import { InternationalPhoneInput } from '../../shared/ui/InternationalPhoneInput'
 import { LtrText } from '../../shared/ui/LtrText'
-import { isValidInternationalPhone } from '../../shared/utils/phone'
 import {
-  accountStatusLabel,
   bookingStatusLabel,
   errorText,
   formatDate,
@@ -34,7 +30,6 @@ import {
   listOwnVisas,
   openOwnDocument,
   removeOwnDocument,
-  updateOwnProfile,
   uploadCustomerDocument,
   type OwnBooking,
   type OwnDocument,
@@ -44,8 +39,6 @@ import {
   type OwnVisa,
   type StatusEvent,
 } from '../../../../lib/customer-data'
-import { listPublishedHajjPrograms, type PublicPackage } from '../../../../lib/catalog'
-
 const fieldClass =
   'w-full rounded-xl border border-(--ra-border) bg-white px-4 py-3 text-sm text-(--ra-black) outline-none transition focus:border-(--ra-green)/35 focus:ring-2 focus:ring-(--ra-ring)'
 
@@ -66,50 +59,9 @@ export function RequireCustomer() {
   return <Outlet />
 }
 
-const accountLinks = [
-  { to: '/account', key: 'nav.overview', end: true },
-  { to: '/account/profile', key: 'nav.profile', end: false },
-  { to: '/account/bookings', key: 'nav.bookings', end: false },
-  { to: '/account/visas', key: 'nav.visas', end: false },
-  { to: '/account/documents', key: 'nav.documents', end: false },
-  { to: '/account/inquiries', key: 'nav.inquiries', end: false },
-] as const
-
 export function AccountLayout() {
-  const { t } = useTranslation('account')
-  const { signOut } = useAuth()
-  const navigate = useNavigate()
-
   return (
-    <div className="mx-auto grid w-full max-w-6xl gap-6 py-8 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <aside className="h-fit rounded-2xl border border-(--ra-border) bg-white p-3 shadow-sm">
-        <nav className="grid gap-1">
-          {accountLinks.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                [
-                  'rounded-xl px-3 py-2.5 text-sm font-semibold transition',
-                  isActive ? 'bg-(--ra-green) text-white' : 'text-(--ra-green) hover:bg-(--ra-bg)',
-                ].join(' ')
-              }
-            >
-              {t(item.key)}
-            </NavLink>
-          ))}
-        </nav>
-        <button
-          type="button"
-          onClick={() => {
-            void signOut().then(() => navigate('/'))
-          }}
-          className="mt-3 w-full rounded-xl border border-(--ra-border) px-3 py-2.5 text-sm font-semibold text-(--ra-muted) hover:text-(--ra-green)"
-        >
-          {t('signOut')}
-        </button>
-      </aside>
+    <div className="mx-auto w-full max-w-6xl py-4 sm:py-6 lg:py-8">
       <div className="min-w-0">
         <Outlet />
       </div>
@@ -149,7 +101,8 @@ function useProfile() {
 export function AccountOverviewPage() {
   const { t, i18n } = useTranslation('account')
   const language = langOf(i18n.language)
-  const { userId, profile, loading, error } = useProfile()
+  const { session } = useAuth()
+  const userId = session?.user.id ?? ''
   const [bookings, setBookings] = useState<OwnBooking[]>([])
   const [bookingsError, setBookingsError] = useState('')
 
@@ -168,17 +121,13 @@ export function AccountOverviewPage() {
     }
   }, [userId, language])
 
-  if (loading) return <Loading label={t('loading')} />
-
   return (
-    <section className="space-y-5">
+    <section className="space-y-4">
       <PageTitle title={t('overview.title')} subtitle={t('overview.subtitle')} />
-      {error ? <Alert message={error} /> : null}
-      {profile ? <ProfileCard profile={profile} language={language} statusLabel={t('overview.status')} /> : null}
-      <div className="rounded-2xl border border-(--ra-border) bg-white p-5">
+      <div className="rounded-2xl border border-(--ra-border) bg-white p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-(--ra-green)">{t('overview.recent')}</h2>
-          <Link to="/account/bookings" className="text-sm font-semibold text-(--ra-gold)">{t('overview.viewAll')}</Link>
+          <h2 className="text-base font-semibold text-(--ra-green)">{t('overview.recent')}</h2>
+          <Link to="/account/bookings" className="text-xs font-semibold text-(--ra-gold) hover:text-(--ra-green)">{t('overview.viewAll')}</Link>
         </div>
         {bookingsError ? <Alert message={bookingsError} /> : null}
         <BookingList bookings={bookings} empty={t('bookings.empty')} language={language} />
@@ -188,94 +137,7 @@ export function AccountOverviewPage() {
 }
 
 export function ProfilePage() {
-  const { t } = useTranslation('account')
-  const { userId, profile, setProfile, loading, error } = useProfile()
-  if (loading) return <Loading label={t('loading')} />
-
-  return (
-    <section className="space-y-4">
-      <PageTitle title={t('profile.title')} subtitle={t('profile.hint')} />
-      {error ? <Alert message={error} /> : null}
-      {profile ? (
-        <ProfileEditor
-          key={profile.id}
-          userId={userId}
-          profile={profile}
-          onSaved={setProfile}
-        />
-      ) : null}
-    </section>
-  )
-}
-
-function ProfileEditor({
-  userId,
-  profile,
-  onSaved,
-}: {
-  userId: string
-  profile: OwnProfile
-  onSaved: (profile: OwnProfile | null) => void
-}) {
-  const { t, i18n } = useTranslation('account')
-  const { language } = useLanguage()
-  const lang = langOf(i18n.language)
-  const [fullName, setFullName] = useState(profile.full_name)
-  const [mobile, setMobile] = useState(profile.mobile)
-  const [country, setCountry] = useState<Country>('SA')
-  const [notice, setNotice] = useState('')
-  const [formError, setFormError] = useState('')
-  const [pending, setPending] = useState(false)
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    if (fullName.trim().length < 2 || !isValidInternationalPhone(mobile, country) || !isMobile(mobile)) {
-      setFormError(t('auth.invalidRegister'))
-      return
-    }
-    setPending(true)
-    setFormError('')
-    setNotice('')
-    try {
-      await updateOwnProfile(userId, { fullName, mobile })
-      const next = await getOwnProfile(userId)
-      onSaved(next)
-      setNotice(t('saved'))
-    } catch (err) {
-      setFormError(errorText(err, lang))
-    } finally {
-      setPending(false)
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="max-w-xl space-y-4 rounded-2xl border border-(--ra-border) bg-white p-5">
-      <label className="grid gap-1.5">
-        <span className="text-xs font-semibold text-(--ra-muted)">{t('fields.fullName')}</span>
-        <input className={fieldClass} value={fullName} onChange={(event) => setFullName(event.target.value)} required />
-      </label>
-      <label className="grid gap-1.5">
-        <span className="text-xs font-semibold text-(--ra-muted)">{t('fields.mobile')}</span>
-        <InternationalPhoneInput
-          id="profile-mobile"
-          value={mobile}
-          onChange={setMobile}
-          onCountryChange={setCountry}
-          country={country}
-          defaultCountry="SA"
-          labelsLocale={language}
-        />
-      </label>
-      <p className="text-sm text-(--ra-muted)">
-        {t('profile.emailLocked')} <LtrText>{profile.email ?? '—'}</LtrText>
-      </p>
-      {formError ? <Alert message={formError} /> : null}
-      {notice ? <Success message={notice} /> : null}
-      <button type="submit" disabled={pending} className="rounded-xl bg-(--ra-green) px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
-        {pending ? t('pending') : t('save')}
-      </button>
-    </form>
-  )
+  return <Navigate to="/account" replace />
 }
 
 export function BookingsPage() {
@@ -352,47 +214,78 @@ export function BookingDetailPage() {
 
   return (
     <section className="space-y-4">
-      <Link to="/account/bookings" className="text-sm font-semibold text-(--ra-green)">{t('back')}</Link>
-      <div className="rounded-2xl border border-(--ra-border) bg-white p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold text-(--ra-green)"><LtrText>{booking.reference}</LtrText></h1>
+      <BackLink to="/account/bookings" label={t('back')} />
+      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_minmax(240px,300px)]">
+      <article className="rounded-2xl border border-(--ra-border) bg-white p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold tracking-wide text-(--ra-muted) uppercase">{t('bookings.reference')}</p>
+            <h1 className="mt-0.5 truncate text-base font-semibold text-(--ra-green)">
+              <LtrText>{booking.reference}</LtrText>
+            </h1>
+            <p className="mt-1 truncate text-sm text-(--ra-black)">{booking.package_title_snapshot || '—'}</p>
+          </div>
           <StatusText>{bookingStatusLabel(booking.status, language)}</StatusText>
         </div>
-        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-          <Info label={t('bookings.package')} value={booking.package_title_snapshot || '—'} />
-          <Info label={t('bookings.date')} value={formatDate(booking.travel_date, language)} />
-          <Info label={t('bookings.travelers')} value={String(booking.travelers_count)} />
-          <Info label={t('bookings.total')} value={formatMoney(booking.total_amount, language)} />
+        <dl className="mt-3 grid grid-cols-3 gap-2">
+          <DetailTile icon={CalendarDays} label={t('bookings.date')} value={formatDate(booking.travel_date, language)} />
+          <DetailTile icon={Users} label={t('bookings.travelers')} value={String(booking.travelers_count)} />
+          <DetailTile icon={Banknote} label={t('bookings.total')} value={formatMoney(booking.total_amount, language)} emphasize />
         </dl>
-        {booking.customer_note ? <p className="mt-4 text-sm leading-relaxed text-(--ra-muted)">{booking.customer_note}</p> : null}
+        {booking.customer_note ? (
+          <p className="mt-3 rounded-xl bg-(--ra-bg) px-3 py-2 text-sm leading-relaxed text-(--ra-muted)">{booking.customer_note}</p>
+        ) : null}
+      </article>
+      <div className="md:col-start-2 md:row-span-2 md:sticky md:top-4">
+        <StatusTimeline events={history} language={language} />
       </div>
-      <Panel title={t('bookings.history')}>
-        {history.length === 0 ? <p className="text-sm text-(--ra-muted)">{t('empty')}</p> : (
-          <ol className="space-y-3">
-            {history.map((event) => (
-              <li key={event.id} className="rounded-xl bg-(--ra-bg) px-4 py-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-semibold text-(--ra-green)">{bookingStatusLabel(event.new_status, language)}</span>
-                  <span className="text-(--ra-muted)">{formatDate(event.created_at, language)}</span>
-                </div>
-                {event.note ? <p className="mt-1 text-(--ra-muted)">{event.note}</p> : null}
-              </li>
-            ))}
-          </ol>
-        )}
-      </Panel>
-      <Panel title={t('bookings.payments')}>
+      <section className="rounded-2xl border border-(--ra-border) bg-white p-4 sm:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-[#D97706]">{t('bookings.payments')}</h2>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFF6E8] text-[#D97706]">
+            <Wallet className="h-4 w-4" aria-hidden="true" />
+          </span>
+        </div>
         {payments.length === 0 ? <p className="text-sm text-(--ra-muted)">{t('bookings.noPayments')}</p> : (
-          <ul className="space-y-2">
-            {payments.map((payment) => (
-              <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-(--ra-bg) px-4 py-3 text-sm">
-                <span>{formatMoney(payment.amount, language)} · {t(`payments.${payment.method}`, { defaultValue: payment.method })}</span>
-                <span className="text-(--ra-muted)">{formatDate(payment.paid_on, language)} · {t(`payments.${payment.status}`, { defaultValue: payment.status })}</span>
-              </li>
-            ))}
+          <ul className="space-y-3">
+            {payments.map((payment) => {
+              const MethodIcon = paymentMethodIcon(payment.method)
+              const voided = payment.status === 'void'
+              return (
+                <li key={payment.id} className="rounded-2xl bg-[#FFF6EE] px-3.5 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-(--ra-green)">{formatMoney(payment.amount, language)}</span>
+                    <span className={['inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', voided ? 'bg-red-50 text-red-700' : 'bg-[#DDF6EF] text-[#0F8F72]'].join(' ')}>
+                      {t(`payments.${payment.status}`, { defaultValue: payment.status })}
+                    </span>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="flex items-center gap-2 rounded-xl bg-white px-2.5 py-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FFF6E8] text-[#D97706]">
+                        <MethodIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <dt className="text-[10px] font-semibold text-(--ra-muted)">{t('payments.method')}</dt>
+                        <dd className="truncate text-xs font-medium text-(--ra-black)">{t(`payments.${payment.method}`, { defaultValue: payment.method })}</dd>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 rounded-xl bg-white px-2.5 py-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FFF6E8] text-[#D97706]">
+                        <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <dt className="text-[10px] font-semibold text-(--ra-muted)">{t('payments.paidOn')}</dt>
+                        <dd className="truncate text-xs font-medium text-(--ra-black)">{formatDate(payment.paid_on, language)}</dd>
+                      </div>
+                    </div>
+                  </dl>
+                </li>
+              )
+            })}
           </ul>
         )}
-      </Panel>
+      </section>
+      </div>
     </section>
   )
 }
@@ -531,7 +424,7 @@ export function VisaDetailPage() {
 
   return (
     <section className="space-y-4">
-      <Link to="/account/visas" className="text-sm font-semibold text-(--ra-green)">{t('back')}</Link>
+      <BackLink to="/account/visas" label={t('back')} />
       <div className="rounded-2xl border border-(--ra-border) bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-(--ra-green)"><LtrText>{visa.reference}</LtrText></h1>
@@ -592,9 +485,8 @@ export function InquiriesPage() {
   const language = langOf(i18n.language)
   const { userId, profile } = useProfile()
   const [params] = useSearchParams()
-  const [programId, setProgramId] = useState(params.get('program') ?? '')
+  const programId = params.get('program') ?? ''
   const [rows, setRows] = useState<OwnInquiry[]>([])
-  const [programs, setPrograms] = useState<PublicPackage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -603,11 +495,10 @@ export function InquiriesPage() {
   useEffect(() => {
     if (!userId) return
     let active = true
-    Promise.all([listOwnInquiries(userId), listPublishedHajjPrograms()])
-      .then(([inquiries, published]) => {
+    listOwnInquiries(userId)
+      .then((inquiries) => {
         if (!active) return
         setRows(inquiries)
-        setPrograms(published)
       })
       .catch((err) => {
         if (active) setError(errorText(err, language))
@@ -622,55 +513,78 @@ export function InquiriesPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const formElement = event.currentTarget
     if (!userId || profile?.account_status !== 'active') {
       setError(errorText(new Error('account cannot submit inquiries'), language))
       return
     }
-    const form = new FormData(event.currentTarget)
+    const form = new FormData(formElement)
     const message = String(form.get('message') ?? '').trim()
-    const travelers = Number(form.get('travelers') ?? 1)
-    const selectedProgram = programId || null
-    if (message.length < 2 || message.length > 2000 || !Number.isInteger(travelers) || travelers < 1 || travelers > 100) {
+    if (message.length < 2 || message.length > 2000) {
       setError(t('inquiries.invalid'))
       return
     }
     setPending(true)
     setError('')
+    setNotice('')
     try {
-      await createHajjInquiry({ userId, programId: selectedProgram, travelers, message })
-      setRows(await listOwnInquiries(userId))
-      setNotice(t('sent'))
-      event.currentTarget.reset()
+      await createHajjInquiry({ userId, programId: programId || null, travelers: 1, message })
     } catch (err) {
       setError(errorText(err, language))
+      setPending(false)
+      return
+    }
+
+    setNotice(t('sent'))
+    formElement.reset()
+    try {
+      setRows(await listOwnInquiries(userId))
+    } catch {
+      setError(t('inquiries.refreshError'))
     } finally {
       setPending(false)
     }
   }
 
   return (
-    <section className="space-y-4">
-      <PageTitle title={t('inquiries.title')} subtitle={t('inquiries.subtitle')} />
-      <form onSubmit={submit} className="grid gap-4 rounded-2xl border border-(--ra-border) bg-white p-5">
-        <label className="grid gap-1.5">
-          <span className="text-xs font-semibold text-(--ra-muted)">{t('fields.program')}</span>
-          <select name="program_id" className={fieldClass} value={programId} onChange={(event) => setProgramId(event.target.value)}>
-            <option value="">{t('inquiries.general')}</option>
-            {programs.map((program) => (
-              <option key={program.id} value={program.id}>{program.title}</option>
-            ))}
-          </select>
-        </label>
-        <TextField label={t('fields.travelers')} name="travelers" type="number" defaultValue="1" />
-        <label className="grid gap-1.5">
-          <span className="text-xs font-semibold text-(--ra-muted)">{t('fields.message')}</span>
-          <textarea name="message" rows={4} className={fieldClass} required />
-        </label>
-        {error ? <Alert message={error} /> : null}
-        {notice ? <Success message={notice} /> : null}
-        <button type="submit" disabled={pending} className="w-fit rounded-xl bg-(--ra-green) px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">
-          {pending ? t('pending') : t('send')}
-        </button>
+    <section className="space-y-6">
+      <PageTitle title={t('inquiries.title')} />
+      <form onSubmit={submit} className="overflow-hidden rounded-2xl border border-(--ra-border) bg-white shadow-sm">
+        <div className="flex items-start gap-3 border-b border-(--ra-border) bg-(--ra-bg) px-5 py-5 sm:px-6">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-(--ra-green) shadow-sm ring-1 ring-(--ra-border)">
+            <MessageSquareText className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-base font-bold text-(--ra-green)">{t('inquiries.formTitle')}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-(--ra-muted)">{t('inquiries.formHint')}</p>
+          </div>
+        </div>
+        <div className="grid gap-5 p-5 sm:p-6">
+          <label className="grid gap-2">
+            <span className="text-sm font-semibold text-(--ra-black)">{t('fields.message')}</span>
+            <textarea
+              name="message"
+              rows={6}
+              maxLength={2000}
+              placeholder={t('inquiries.messagePlaceholder')}
+              className={`${fieldClass} min-h-36 resize-y leading-relaxed`}
+              required
+            />
+            <span className="text-xs text-(--ra-muted)">{t('inquiries.messageHint')}</span>
+          </label>
+          {error ? <Alert message={error} /> : null}
+          {notice ? <Success message={notice} /> : null}
+          <div className="flex justify-start border-t border-(--ra-border) pt-5">
+            <button
+              type="submit"
+              disabled={pending}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-(--ra-green) px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-(--ra-green)/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ra-green) disabled:cursor-wait disabled:opacity-60"
+            >
+              <Send className="h-4 w-4" aria-hidden="true" />
+              {pending ? t('pending') : t('inquiries.submit')}
+            </button>
+          </div>
+        </div>
       </form>
       {loading ? <Loading label={t('loading')} /> : rows.length === 0 ? <p className="text-sm text-(--ra-muted)">{t('inquiries.empty')}</p> : (
         <ul className="grid gap-3">
@@ -783,14 +697,19 @@ function BookingList({ bookings, empty, language }: { bookings: OwnBooking[]; em
     <ul className="mt-4 grid gap-3">
       {bookings.map((booking) => (
         <li key={booking.id}>
-          <Link to={`/account/bookings/${booking.id}`} className="block rounded-xl border border-(--ra-border) px-4 py-3 transition hover:border-(--ra-gold)/50">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-bold text-(--ra-green)"><LtrText>{booking.reference}</LtrText></span>
-              <StatusText>{bookingStatusLabel(booking.status, language)}</StatusText>
+          <Link to={`/account/bookings/${booking.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-(--ra-border) bg-(--ra-bg)/50 px-3 py-2.5 transition hover:border-(--ra-gold)/50 hover:bg-white">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-(--ra-green)"><LtrText>{booking.reference}</LtrText></p>
+              <p className="mt-0.5 truncate text-xs text-(--ra-black)/80">{booking.package_title_snapshot || '—'}</p>
+              <p className="mt-0.5 text-xs text-(--ra-muted)">
+                <LtrText>
+                  {formatDate(booking.travel_date, language)}
+                  <span aria-hidden="true"> · </span>
+                  {formatMoney(booking.total_amount, language)}
+                </LtrText>
+              </p>
             </div>
-            <p className="mt-1 text-sm text-(--ra-muted)">
-              {booking.package_title_snapshot || '—'} · {formatDate(booking.travel_date, language)} · {formatMoney(booking.total_amount, language)}
-            </p>
+            <StatusText>{bookingStatusLabel(booking.status, language)}</StatusText>
           </Link>
         </li>
       ))}
@@ -798,35 +717,12 @@ function BookingList({ bookings, empty, language }: { bookings: OwnBooking[]; em
   )
 }
 
-function ProfileCard({ profile, language, statusLabel }: { profile: OwnProfile; language: AppLanguage; statusLabel: string }) {
-  return (
-    <div className="rounded-2xl border border-(--ra-border) bg-white p-5">
-      <h2 className="text-xl font-bold text-(--ra-green)">{profile.full_name || '—'}</h2>
-      <p className="mt-1 text-sm text-(--ra-muted)"><LtrText>{profile.mobile}</LtrText></p>
-      <p className="text-sm text-(--ra-muted)"><LtrText>{profile.email ?? '—'}</LtrText></p>
-      <p className="mt-3 text-sm">
-        <span className="text-(--ra-muted)">{statusLabel}: </span>
-        <StatusText>{accountStatusLabel(profile.account_status, language)}</StatusText>
-      </p>
-    </div>
-  )
-}
-
-function PageTitle({ title, subtitle }: { title: string; subtitle: string }) {
+function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-(--ra-green)">{title}</h1>
-      <p className="mt-1 text-sm leading-relaxed text-(--ra-muted)">{subtitle}</p>
+      <h1 className="text-xl font-semibold text-(--ra-green)">{title}</h1>
+      {subtitle ? <p className="mt-1 text-sm leading-relaxed text-(--ra-muted)">{subtitle}</p> : null}
     </div>
-  )
-}
-
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-2xl border border-(--ra-border) bg-white p-5">
-      <h2 className="mb-3 text-lg font-bold text-(--ra-green)">{title}</h2>
-      {children}
-    </section>
   )
 }
 
@@ -848,8 +744,195 @@ function TextField({ label, name, type = 'text', defaultValue }: { label: string
   )
 }
 
+const BOOKING_STATUS_TONE: Record<string, { icon: typeof Clock; chip: string; node: string; currentNode: string }> = {
+  pending: {
+    icon: ClipboardList,
+    chip: 'bg-[#FFF4DE] text-[#A16207]',
+    node: 'bg-[#FFF8EC] text-[#C4A15A] ring-1 ring-[#F3E4C4]',
+    currentNode: 'bg-[#C4A15A] text-white',
+  },
+  under_review: {
+    icon: Search,
+    chip: 'bg-[#E7F3FC] text-[#1D6FA5]',
+    node: 'bg-[#F3F9FD] text-[#7EB6E0] ring-1 ring-[#D7EAF6]',
+    currentNode: 'bg-[#3B82C4] text-white',
+  },
+  confirmed: {
+    icon: BadgeCheck,
+    chip: 'bg-[#E5F6EE] text-[#157A4B]',
+    node: 'bg-[#F2FBF7] text-[#7DCAA8] ring-1 ring-[#D4F0E3]',
+    currentNode: 'bg-[#15956A] text-white',
+  },
+  completed: {
+    icon: Check,
+    chip: 'bg-[#DDF6EF] text-[#0F8F72]',
+    node: 'bg-white text-[#8FB5AA] ring-1 ring-[#E3EEEA]',
+    currentNode: 'bg-[#12A594] text-white',
+  },
+  cancelled: {
+    icon: X,
+    chip: 'bg-red-50 text-red-700',
+    node: 'bg-red-50 text-red-400 ring-1 ring-red-100',
+    currentNode: 'bg-red-500 text-white',
+  },
+}
+
+function formatStatusTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  const datePart = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date)
+  const timePart = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(date)
+  return `${datePart} · ${timePart}`
+}
+
+function StatusTimeline({ events, language }: { events: StatusEvent[]; language: AppLanguage }) {
+  const { t } = useTranslation('account')
+  const ordered = [...events].reverse()
+
+  return (
+    <section className="rounded-2xl border border-(--ra-border) bg-white p-4 sm:p-5">
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-[#D97706]">{t('bookings.history')}</h2>
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFF6E8] text-[#D97706]">
+          <Clock className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </div>
+      {ordered.length === 0 ? <p className="text-sm text-(--ra-muted)">{t('empty')}</p> : (
+        <ol>
+          {ordered.map((event, index) => (
+            <TimelineStep
+              key={event.id}
+              event={event}
+              language={language}
+              current={index === 0}
+              last={index === ordered.length - 1}
+              currentLabel={t('bookings.current')}
+              noteLabel={t('fields.note')}
+            />
+          ))}
+        </ol>
+      )}
+    </section>
+  )
+}
+
+function TimelineStep({
+  event,
+  language,
+  current,
+  last,
+  currentLabel,
+  noteLabel,
+}: {
+  event: StatusEvent
+  language: AppLanguage
+  current: boolean
+  last: boolean
+  currentLabel: string
+  noteLabel: string
+}) {
+  const [noteOpen, setNoteOpen] = useState(false)
+  const tone = BOOKING_STATUS_TONE[event.new_status] ?? BOOKING_STATUS_TONE.pending
+  const Icon = tone.icon
+  const noteButton = event.note ? (
+    <button
+      type="button"
+      aria-expanded={noteOpen}
+      aria-label={noteLabel}
+      onClick={() => setNoteOpen((open) => !open)}
+      className={[
+        'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition',
+        noteOpen ? 'bg-[#D97706] text-white' : 'bg-white text-[#D97706] ring-1 ring-[#F3E0C4] hover:bg-[#FFF6EE]',
+      ].join(' ')}
+    >
+      <MessageSquareText className="h-3.5 w-3.5" aria-hidden="true" />
+    </button>
+  ) : null
+  const notePanel = noteOpen && event.note ? (
+    <p className="rounded-xl bg-white px-3 py-2 text-xs leading-relaxed text-(--ra-black) ring-1 ring-[#F3E0C4]">{event.note}</p>
+  ) : null
+
+  return (
+    <li className="flex items-stretch gap-3">
+      <div className="relative flex w-9 shrink-0 justify-center">
+        {last ? null : <span aria-hidden="true" className="absolute top-9 bottom-0 left-1/2 w-px -translate-x-1/2 bg-[#E8D3A4]" />}
+        <span
+          className={[
+            'relative z-10 flex items-center justify-center rounded-full ring-4 ring-white',
+            current ? 'h-9 w-9' : 'mt-0.5 h-8 w-8',
+            current ? tone.currentNode : tone.node,
+          ].join(' ')}
+        >
+          <Icon className={current ? 'h-4 w-4' : 'h-3.5 w-3.5'} strokeWidth={2.25} aria-hidden="true" />
+        </span>
+      </div>
+      <div className={last ? 'min-w-0 flex-1' : 'min-w-0 flex-1 pb-5'}>
+        {current ? (
+          <div className="rounded-2xl bg-[#FFF6EE] px-3.5 py-3">
+            <div className="flex items-center gap-2">
+              <span className={['inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold', tone.chip].join(' ')}>
+                {bookingStatusLabel(event.new_status, language)}
+                <Icon className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
+              </span>
+              <span className="text-xs font-medium text-[#D97706]">{currentLabel}</span>
+              {noteButton ? <span className="ms-auto">{noteButton}</span> : null}
+            </div>
+            <p className="mt-2 text-xs text-[#9AA3AF]"><LtrText>{formatStatusTime(event.created_at)}</LtrText></p>
+            {notePanel ? <div className="mt-2">{notePanel}</div> : null}
+          </div>
+        ) : (
+          <div className="flex flex-col items-start gap-1.5 pt-1">
+            <div className="flex items-center gap-2">
+              <span className={['inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold', tone.chip].join(' ')}>
+                {bookingStatusLabel(event.new_status, language)}
+                <Icon className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden="true" />
+              </span>
+              {noteButton}
+            </div>
+            <p className="text-xs text-[#9AA3AF]"><LtrText>{formatStatusTime(event.created_at)}</LtrText></p>
+            {notePanel}
+          </div>
+        )}
+      </div>
+    </li>
+  )
+}
+
+function paymentMethodIcon(method: string): LucideIcon {
+  if (method === 'cash') return Banknote
+  if (method === 'pos') return CreditCard
+  if (method === 'bank_transfer') return Landmark
+  return Wallet
+}
+
+function DetailTile({ icon: Icon, label, value, emphasize }: { icon: LucideIcon; label: string; value: string; emphasize?: boolean }) {
+  return (
+    <div className="min-w-0 rounded-xl bg-(--ra-bg) px-2 py-2">
+      <dt className="flex items-center gap-1 text-[10px] font-semibold tracking-wide text-(--ra-muted)">
+        <Icon className="h-3 w-3 shrink-0 text-[#D97706]" aria-hidden="true" />
+        <span className="truncate">{label}</span>
+      </dt>
+      <dd className={emphasize ? 'mt-0.5 truncate text-xs font-semibold text-(--ra-green)' : 'mt-0.5 truncate text-xs font-medium text-(--ra-black)'}>
+        {value}
+      </dd>
+    </div>
+  )
+}
+
+function BackLink({ to, label }: { to: string; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-(--ra-green) ring-1 ring-(--ra-border) transition hover:ring-(--ra-gold)"
+    >
+      <ChevronRight className="h-4 w-4 ltr:rotate-180" aria-hidden="true" />
+      {label}
+    </Link>
+  )
+}
+
 function StatusText({ children }: { children: ReactNode }) {
-  return <span className="inline-flex rounded-full bg-(--ra-gold-soft) px-2.5 py-1 text-xs font-bold text-(--ra-green)">{children}</span>
+  return <span className="inline-flex shrink-0 rounded-full bg-(--ra-gold-soft) px-2.5 py-1 text-xs font-bold text-(--ra-green)">{children}</span>
 }
 
 function Alert({ message }: { message: string }) {

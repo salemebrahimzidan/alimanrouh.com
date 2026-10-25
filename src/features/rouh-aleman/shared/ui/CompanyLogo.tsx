@@ -26,7 +26,7 @@ function frameFor({ compact, mobileHeader }: Pick<Props, 'compact' | 'mobileHead
     return 'h-12 w-12 p-0 sm:h-14 sm:w-14'
   }
   if (compact) {
-    return 'h-16 w-16 p-0 sm:h-[4.5rem] sm:w-[4.5rem]'
+    return 'h-12 w-12 p-0 xl:h-[4.5rem] xl:w-[4.5rem]'
   }
   return 'h-20 w-20 p-1 sm:h-[5.25rem] sm:w-[5.25rem] lg:h-24 lg:w-24 lg:p-1.5'
 }

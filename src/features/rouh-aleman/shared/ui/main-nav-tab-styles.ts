@@ -9,7 +9,7 @@ const navLinkReset =
 export function mainNavTabLinkClass(isActive: boolean) {
   return [
     navLinkReset,
-    'relative inline-flex flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-full px-3 py-2 text-[13px] tracking-tight lg:px-5 lg:text-sm',
+    'relative inline-flex shrink-0 grow basis-auto items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs tracking-tight xl:gap-2 xl:px-4 xl:py-2 xl:text-sm',
     `transition-[color,background-color,box-shadow,ring-color] ${navEase}`,
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ra-green)',
     isActive
@@ -27,7 +27,7 @@ export function mainNavTabLinkClass(isActive: boolean) {
 
 /** Desktop tab row — segmented bar. */
 export const mainNavTabListClass =
-  'relative flex w-full min-w-0 items-stretch gap-1 overflow-visible rounded-full bg-(--ra-bg)/80 p-1'
+  'relative flex w-full min-w-0 items-stretch gap-0.5 overflow-x-auto rounded-full bg-(--ra-bg)/80 p-1 [scrollbar-width:none] xl:gap-1 [&::-webkit-scrollbar]:hidden'
 
 /** Premium CTA — Book now (desktop + mobile). */
 export const bookNowButtonClass = [

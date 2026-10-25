@@ -91,6 +91,20 @@
   box-shadow: none;
 }
 
+.PhoneInputField--compact {
+  height: 2.5rem;
+  border-radius: 0.625rem;
+}
+
+.PhoneInputField--compact .PhoneInputInput {
+  font-size: 0.875rem;
+}
+
+.PhoneInputField--brand:focus-within {
+  border-color: var(--ra-green);
+  box-shadow: 0 0 0 3px rgba(6, 51, 39, 0.16);
+}
+
 .PhoneInputField--error {
   border-color: #f87171;
 }

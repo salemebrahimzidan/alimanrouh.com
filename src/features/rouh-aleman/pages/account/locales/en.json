@@ -63,7 +63,7 @@
     "bookings": "Bookings",
     "visas": "Visas",
     "documents": "Documents",
-    "inquiries": "Hajj inquiries"
+    "inquiries": "Inquiries"
   },
   "overview": {
     "title": "My account",
@@ -72,9 +72,14 @@
     "recent": "Recent bookings",
     "viewAll": "All bookings"
   },
+  "drawer": {
+    "loading": "Loading account details...",
+    "loadError": "Could not load account details. Please try again.",
+    "profileUnavailable": "Account details are unavailable."
+  },
   "profile": {
     "title": "Profile",
-    "hint": "You can edit your name and mobile number. Account status and email are controlled by confirmation and the agency.",
+    "hint": "These are your account details. Name, email, and mobile cannot be changed here.",
     "emailLocked": "Email is tied to sign-in and is not changed here."
   },
   "bookings": {
@@ -89,6 +94,7 @@
     "status": "Status",
     "note": "Your note",
     "history": "Status history",
+    "current": "Current",
     "payments": "Recorded payments",
     "noPayments": "No payments are recorded for this booking.",
     "missing": "This booking was not found."
@@ -109,13 +115,21 @@
     "removed": "File removed."
   },
   "inquiries": {
-    "title": "Hajj inquiries",
+    "title": "Inquiries",
     "subtitle": "An inquiry is a contact request, not a confirmed booking or an official Hajj permit.",
     "empty": "No inquiries.",
     "general": "General inquiry",
-    "invalid": "Write a message and choose 1 to 100 travelers."
+    "formTitle": "Send an inquiry",
+    "formHint": "Tell us what you need, and our team will get back to you.",
+    "messagePlaceholder": "Write the details of your inquiry here...",
+    "messageHint": "Please provide a clear message. Maximum 2,000 characters.",
+    "submit": "Send inquiry",
+    "refreshError": "Your inquiry was sent, but the list could not be refreshed. Reload the page to see it.",
+    "invalid": "Enter a message between 2 and 2,000 characters."
   },
   "payments": {
+    "method": "Method",
+    "paidOn": "Paid on",
     "cash": "Cash",
     "bank_transfer": "Bank transfer",
     "pos": "Card terminal",
